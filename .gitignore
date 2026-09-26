@@ -1,0 +1,76 @@
+# ============================================================
+# .gitignore – TTS Tiếng Việt (FastAPI + SQLite + Python)
+# ============================================================
+
+# ─── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# ─── Database ──────────────────────────────────────────────
+# File DB tự sinh khi chạy init_db() – không cần commit
+database.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Audio output (file tạm, tự sinh khi ghép nối) ─────────
+static/temp_outputs/*.wav
+static/temp_outputs/*.mp3
+
+# Giữ lại thư mục (tracked bằng .gitkeep)
+!static/temp_outputs/.gitkeep
+
+# ─── Kho âm thanh gốc (có thể rất nặng) ───────────────────
+# Bỏ comment dòng dưới nếu KHÔNG muốn commit file .wav gốc
+# static/audio_corpus/*.wav
+
+# ─── Môi trường & cấu hình bí mật ─────────────────────────
+.env
+.env.local
+.env.*.local
+*.secret
+config.local.py
+
+# ─── IDE & Editor ──────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ─── OS ────────────────────────────────────────────────────
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─── Logs ──────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Coverage & test ───────────────────────────────────────
+.coverage
+.pytest_cache/
+htmlcov/
