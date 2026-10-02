@@ -73,9 +73,9 @@ btnConvert.addEventListener('click', async () => {
     }
 
     const data = await response.json();
-    // data = { audio_url: "...", vni_codes: [...] }
+    // data = { audio_url: "...", vni_codes: [...], not_found: [...] }
 
-    showAudioResult(data.audio_url, data.vni_codes || []);
+    showAudioResult(data.audio_url, data.vni_codes || [], data.not_found || []);
     setStatus('success', '✅ Chuyển đổi thành công!');
 
   } catch (err) {
@@ -90,7 +90,7 @@ btnConvert.addEventListener('click', async () => {
 // ============================================================
 // SHOW AUDIO RESULT
 // ============================================================
-function showAudioResult(audioUrl, vniCodes) {
+function showAudioResult(audioUrl, vniCodes, notFound = []) {
   // Hiển thị panel kết quả
   resultPlaceholder.style.display = 'none';
   audioResult.classList.add('visible');
@@ -108,6 +108,14 @@ function showAudioResult(audioUrl, vniCodes) {
     const chip = document.createElement('span');
     chip.className = 'vni-chip';
     chip.textContent = code;
+    
+    // Đổi màu nếu không tìm thấy từ trong CSDL
+    if (notFound.includes(code)) {
+      chip.style.backgroundColor = '#ffebee';
+      chip.style.color = '#d32f2f';
+      chip.style.borderColor = '#ef9a9a';
+    }
+    
     vniChips.appendChild(chip);
   });
 }

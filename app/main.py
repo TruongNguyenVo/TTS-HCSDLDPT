@@ -81,7 +81,6 @@ async def text_to_speech(body: TTSRequest):
     Returns:
         dict: { "audio_url": "/static/temp_outputs/output.wav" }
     """
-    # TODO: Implement logic xử lý TTS
     vni_codes = vni_encoder.encode_sentence(body.text)
-    audio_url = tts_engine.concatenate_audio(vni_codes, body.speaker_id)
-    return {"audio_url": audio_url, "vni_codes": vni_codes}
+    audio_url, not_found = tts_engine.concatenate_audio(vni_codes, body.speaker_id)
+    return {"audio_url": audio_url, "vni_codes": vni_codes, "not_found": not_found}
