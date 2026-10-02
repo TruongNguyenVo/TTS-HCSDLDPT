@@ -1,171 +1,169 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Hệ thống chuyển đổi văn bản tiếng Việt thành âm thanh sử dụng phương pháp ghép nối (Concatenative TTS)" />
-  <title>TTS Tiếng Việt – Chuyển Văn Bản Thành Âm Thanh</title>
+  <meta name="description" content="Hệ thống chuyển đổi văn bản tiếng Việt thành âm thanh" />
+  <title>TTS Tiếng Việt</title>
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
+
 <body>
 
-<div class="app-wrapper">
+  <div class="app-wrapper">
 
-  <!-- ===== HEADER ===== -->
-  <header class="app-header">
-    <div class="header-brand">
-      <div class="header-icon">🎙️</div>
-      <div>
-        <div class="header-title">TTS Tiếng Việt</div>
-        <div class="header-subtitle">Concatenative Speech Synthesis</div>
+    <!-- ===== HEADER ===== -->
+    <!-- <header class="app-header">
+      <div class="header-brand">
+        <div class="header-icon">🎙️</div>
+        <div>
+          <div class="header-title">TTS Tiếng Việt</div>
+          <div class="header-subtitle">Concatenative Speech Synthesis</div>
+        </div>
       </div>
-    </div>
-    <div class="header-badge">
-      <span class="dot"></span>
-      Server đang chạy
-    </div>
-  </header>
+      <div class="header-badge">
+        <span class="dot"></span>
+        Server đang chạy
+      </div>
+    </header> -->
 
-  <!-- ===== MAIN TWO-COLUMN GRID ===== -->
-  <main class="main-grid">
+    <!-- ===== MAIN TWO-COLUMN GRID ===== -->
+    <main class="main-grid">
 
-    <!-- ─────────────────────────────────────
+      <!-- ─────────────────────────────────────
          LEFT PANEL – INPUT
     ───────────────────────────────────── -->
-    <section class="panel" id="panel-input">
-      <div class="panel-header">
-        <div class="panel-icon violet">✏️</div>
-        <div>
-          <div class="panel-title">Văn Bản Đầu Vào</div>
-          <div class="panel-desc">Nhập câu tiếng Việt cần chuyển đổi</div>
-        </div>
-      </div>
-
-      <!-- Textarea -->
-      <div class="field-group">
-        <label for="text-input">Nội dung văn bản</label>
-        <textarea
-          id="text-input"
-          placeholder="Ví dụ: bác ba đi cảng..."
-          maxlength="500"
-          spellcheck="false"
-          autofocus
-        ></textarea>
-        <div class="char-count" id="char-count">0 / 500 ký tự</div>
-      </div>
-
-      <!-- Speaker select -->
-      <div class="field-group">
-        <label for="speaker-select">Giọng đọc</label>
-        <select id="speaker-select">
-          {% if speakers %}
-            {% for sp in speakers %}
-            <option value="{{ sp.speaker_id }}">{{ sp.speaker_name }}</option>
-            {% endfor %}
-          {% else %}
-          <option value="1">Giọng mặc định (Chưa có dữ liệu)</option>
-          {% endif %}
-        </select>
-      </div>
-
-      <!-- Status -->
-      <div class="status-bar" id="status-bar" role="alert"></div>
-
-      <!-- Convert button -->
-      <button class="btn-convert" id="btn-convert" type="button">
-        <span class="btn-icon">▶</span>
-        <span class="spinner"></span>
-        <span class="btn-label">Chuyển Đổi Thành Âm Thanh</span>
-      </button>
-    </section>
-
-    <!-- ─────────────────────────────────────
-         RIGHT PANEL – OUTPUT
-    ───────────────────────────────────── -->
-    <section class="panel" id="panel-output">
-      <div class="panel-header">
-        <div class="panel-icon blue">🔊</div>
-        <div>
-          <div class="panel-title">Kết Quả Âm Thanh</div>
-          <div class="panel-desc">Tệp âm thanh sau khi ghép nối</div>
-        </div>
-      </div>
-
-      <!-- Placeholder (hiển thị khi chưa có audio) -->
-      <div class="result-placeholder" id="result-placeholder">
-        <div class="placeholder-icon">🎵</div>
-        <div class="placeholder-text">
-          Âm thanh sẽ xuất hiện ở đây<br/>sau khi bạn nhấn Chuyển Đổi
-        </div>
-      </div>
-
-      <!-- Audio result (ẩn, hiện khi có kết quả) -->
-      <div class="audio-result" id="audio-result">
-
-        <!-- Waveform animation bars -->
-        <div class="waveform-bars" id="waveform-bars">
-          <div class="bar" style="height:16px"></div>
-          <div class="bar" style="height:28px"></div>
-          <div class="bar" style="height:44px"></div>
-          <div class="bar" style="height:56px"></div>
-          <div class="bar" style="height:36px"></div>
-          <div class="bar" style="height:24px"></div>
-          <div class="bar" style="height:48px"></div>
-          <div class="bar" style="height:32px"></div>
-          <div class="bar" style="height:20px"></div>
-          <div class="bar" style="height:40px"></div>
-          <div class="bar" style="height:52px"></div>
-          <div class="bar" style="height:28px"></div>
-          <div class="bar" style="height:16px"></div>
-          <div class="bar" style="height:36px"></div>
-          <div class="bar" style="height:44px"></div>
-          <div class="bar" style="height:24px"></div>
-          <div class="bar" style="height:56px"></div>
-          <div class="bar" style="height:32px"></div>
-          <div class="bar" style="height:20px"></div>
-          <div class="bar" style="height:44px"></div>
-        </div>
-
-        <!-- Custom player -->
-        <div class="audio-player-wrap">
-          <div class="player-controls">
-            <button class="btn-play" id="btn-play" title="Phát / Dừng">▶</button>
-
-            <div class="player-time-wrap">
-              <div class="progress-bar-bg" id="progress-bg">
-                <div class="progress-bar-fill" id="progress-fill"></div>
-              </div>
-              <div class="player-timestamps">
-                <span id="time-current">0:00</span>
-                <span id="time-total">0:00</span>
-              </div>
-            </div>
-
-            <a class="btn-download" id="btn-download" title="Tải xuống" download>⬇</a>
+      <section class="panel" id="panel-input">
+        <div class="panel-header">
+          <div class="panel-icon violet">✏️</div>
+          <div>
+            <div class="panel-title">Văn Bản Đầu Vào</div>
+            <div class="panel-desc">Nhập câu tiếng Việt cần chuyển đổi</div>
           </div>
         </div>
 
-        <!-- Hidden native audio element -->
-        <audio id="audio-native"></audio>
-
-        <!-- VNI codes -->
-        <div class="vni-section">
-          <label>Mã VNI được mã hóa</label>
-          <div class="vni-chips" id="vni-chips"></div>
+        <!-- Textarea -->
+        <div class="field-group">
+          <label for="text-input">Nội dung văn bản</label>
+          <textarea id="text-input" placeholder="Ví dụ: bác ba đi cảng..." maxlength="500" spellcheck="false"
+            autofocus></textarea>
+          <div class="char-count" id="char-count">0 / 500 ký tự</div>
         </div>
 
-      </div><!-- /.audio-result -->
-    </section>
+        <!-- Speaker select -->
+        <div class="field-group" style="display: none;">
+          <label for="speaker-select">Giọng đọc</label>
+          <select id="speaker-select">
+            {% if speakers %}
+            {% for sp in speakers %}
+            <option value="{{ sp.speaker_id }}">{{ sp.speaker_name }}</option>
+            {% endfor %}
+            {% else %}
+            <option value="1">Giọng mặc định (Chưa có dữ liệu)</option>
+            {% endif %}
+          </select>
+        </div>
 
-  </main>
+        <!-- Status -->
+        <div class="status-bar" id="status-bar" role="alert"></div>
 
-  <!-- ===== FOOTER ===== -->
-  <footer class="app-footer">
-    Hệ Cơ Sở Dữ Liệu Đa Phương Tiện &mdash; Đề tài 1: Concatenative TTS
-  </footer>
+        <!-- Convert button -->
+        <button class="btn-convert" id="btn-convert" type="button">
+          <span class="btn-icon">▶</span>
+          <span class="spinner"></span>
+          <span class="btn-label">Chuyển Đổi Thành Âm Thanh</span>
+        </button>
+      </section>
 
-</div><!-- /.app-wrapper -->
+      <!-- ─────────────────────────────────────
+         RIGHT PANEL – OUTPUT
+    ───────────────────────────────────── -->
+      <section class="panel" id="panel-output">
+        <div class="panel-header">
+          <div class="panel-icon blue">🔊</div>
+          <div>
+            <div class="panel-title">Kết Quả Âm Thanh</div>
+            <div class="panel-desc">Tệp âm thanh sau khi ghép nối</div>
+          </div>
+        </div>
 
-<script src="/static/js/main.js"></script>
+        <!-- Placeholder (hiển thị khi chưa có audio) -->
+        <div class="result-placeholder" id="result-placeholder">
+          <div class="placeholder-icon">🎵</div>
+          <div class="placeholder-text">
+            Âm thanh sẽ xuất hiện ở đây<br />sau khi bạn nhấn Chuyển Đổi
+          </div>
+        </div>
+
+        <!-- Audio result (ẩn, hiện khi có kết quả) -->
+        <div class="audio-result" id="audio-result">
+
+          <!-- Waveform animation bars -->
+          <div class="waveform-bars" id="waveform-bars">
+            <div class="bar" style="height:16px"></div>
+            <div class="bar" style="height:28px"></div>
+            <div class="bar" style="height:44px"></div>
+            <div class="bar" style="height:56px"></div>
+            <div class="bar" style="height:36px"></div>
+            <div class="bar" style="height:24px"></div>
+            <div class="bar" style="height:48px"></div>
+            <div class="bar" style="height:32px"></div>
+            <div class="bar" style="height:20px"></div>
+            <div class="bar" style="height:40px"></div>
+            <div class="bar" style="height:52px"></div>
+            <div class="bar" style="height:28px"></div>
+            <div class="bar" style="height:16px"></div>
+            <div class="bar" style="height:36px"></div>
+            <div class="bar" style="height:44px"></div>
+            <div class="bar" style="height:24px"></div>
+            <div class="bar" style="height:56px"></div>
+            <div class="bar" style="height:32px"></div>
+            <div class="bar" style="height:20px"></div>
+            <div class="bar" style="height:44px"></div>
+          </div>
+
+          <!-- Custom player -->
+          <div class="audio-player-wrap">
+            <div class="player-controls">
+              <button class="btn-play" id="btn-play" title="Phát / Dừng">▶</button>
+
+              <div class="player-time-wrap">
+                <div class="progress-bar-bg" id="progress-bg">
+                  <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                <div class="player-timestamps">
+                  <span id="time-current">0:00</span>
+                  <span id="time-total">0:00</span>
+                </div>
+              </div>
+
+              <a class="btn-download" id="btn-download" title="Tải xuống" download>⬇</a>
+            </div>
+          </div>
+
+          <!-- Hidden native audio element -->
+          <audio id="audio-native"></audio>
+
+          <!-- VNI codes -->
+          <div class="vni-section">
+            <label>Mã VNI được mã hóa</label>
+            <div class="vni-chips" id="vni-chips"></div>
+          </div>
+
+        </div><!-- /.audio-result -->
+      </section>
+
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <!-- <footer class="app-footer">
+      Hệ Cơ Sở Dữ Liệu Đa Phương Tiện &mdash; Đề tài 1: Concatenative TTS
+    </footer> -->
+
+  </div><!-- /.app-wrapper -->
+
+  <script src="/static/js/main.js"></script>
 </body>
+
 </html>
