@@ -34,7 +34,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Words (
             word_id       INTEGER PRIMARY KEY AUTOINCREMENT,
-            original_word TEXT    UNIQUE NOT NULL,
+            original_word TEXT    NOT NULL,
             vni_code      TEXT    UNIQUE NOT NULL
         )
     """)
@@ -63,8 +63,76 @@ def init_db():
     """)
 
     conn.commit()
+
+    # --- Nạp dữ liệu mẫu nếu chưa có ---
+    _seed_sample_data(conn)
+
     conn.close()
     print("[DB] Database initialized successfully!")
+
+
+def _seed_sample_data(conn: sqlite3.Connection):
+    """
+    Nạp dữ liệu mẫu ban đầu vào CSDL nếu chưa có dữ liệu.
+    Chỉ chạy một lần khi database còn trống.
+
+    Dữ liệu mẫu:
+        - 1 Speaker mặc định
+        - 8 từ với mã VNI và đường dẫn file .mav tương ứng
+    """
+    cursor = conn.cursor()
+
+    # Kiểm tra nếu đã có dữ liệu thì bỏ qua
+    cursor.execute("SELECT COUNT(*) FROM Speakers")
+    if cursor.fetchone()[0] > 0:
+        return
+
+    print("[DB] Seeding sample data...")
+
+    # --- Thêm Speaker mặc định ---
+    cursor.execute(
+        "INSERT INTO Speakers (speaker_name) VALUES (?)",
+        ("Giọng mẫu",)
+    )
+    speaker_id = cursor.lastrowid
+
+    # --- Dữ liệu mẫu: (vni_code, original_word) ---
+    sample_words = [
+        ("cac1",   "các"),
+        ("ban5",   "bạn"),
+        ("con0",   "con"),
+        ("ca1",    "cá"),
+        ("be2",    "bè"),
+        ("ba0",    "ba"),
+        ("d-ang0", "đang"),
+        ("d-i0",   "đi"),
+    ]
+
+    for vni_code, original_word in sample_words:
+        # Thêm vào bảng Words
+        cursor.execute(
+            "INSERT OR IGNORE INTO Words (original_word, vni_code) VALUES (?, ?)",
+            (original_word, vni_code)
+        )
+        cursor.execute(
+            "SELECT word_id FROM Words WHERE vni_code = ?",
+            (vni_code,)
+        )
+        word_id = cursor.fetchone()[0]
+
+        # file_name = vni_code + ".wav"
+        file_path = f"static/audio_corpus/{vni_code}.wav"
+
+        # Thêm vào bảng Audio_Corpus
+        cursor.execute(
+            """INSERT OR IGNORE INTO Audio_Corpus
+               (word_id, speaker_id, file_path, duration_ms, pitch_avg, energy_avg)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (word_id, speaker_id, file_path, None, None, None)
+        )
+
+    conn.commit()
+    print(f"[DB] Seeded {len(sample_words)} sample words with speaker_id={speaker_id}.")
 
 
 def get_audio_path(vni_code: str, speaker_id: int) -> str | None:

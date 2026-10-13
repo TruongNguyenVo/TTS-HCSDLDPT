@@ -74,3 +74,5 @@ logs/
 .coverage
 .pytest_cache/
 htmlcov/
+
+/source_test/*
