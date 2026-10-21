@@ -1,6 +1,6 @@
 # TÓM TẮT
 
-Đề tài trình bày việc xây dựng hệ thống chuyển đổi văn bản thành âm thanh (Text-to-Speech — TTS) cho tiếng Việt ở mức từ (word-level), sử dụng phương pháp tổng hợp ghép nối (concatenative synthesis). Hệ thống nhận đầu vào là câu tiếng Việt, chuẩn hóa và mã hóa từng từ theo quy ước bộ gõ VNI, sau đó tra cứu cơ sở dữ liệu SQLite để tìm tệp âm thanh `.wav` tương ứng do các thành viên trong nhóm thu âm. Các tệp âm thanh được ghép nối bằng thư viện `pydub` với kỹ thuật chèn khoảng lặng 50 ms và làm mịn bờ ghép (cross-fade 10 ms) nhằm tạo ra tín hiệu đầu ra liền mạch. Toàn bộ hệ thống được triển khai trên nền tảng Web với FastAPI (backend), SQLite (CSDL) và HTML/CSS/JavaScript (frontend), cho phép người dùng nhập văn bản, chọn giọng đọc, nghe kết quả trực tiếp trên trình duyệt và tải xuống tệp `.wav`. Kết quả thực nghiệm cho thấy âm thanh tổng hợp rõ tiếng ở mức từ đơn, tuy nhiên ngữ điệu liên từ vẫn còn hạn chế so với cách phát âm liền mạch tự nhiên.
+Đề tài trình bày việc xây dựng hệ thống chuyển đổi văn bản thành âm thanh cho tiếng Việt ở mức từ, sử dụng phương pháp tổng hợp ghép nối. Hệ thống nhận đầu vào là câu tiếng Việt, chuẩn hóa và mã hóa từng từ theo quy ước bộ gõ VNI, sau đó tra cứu cơ sở dữ liệu SQLite để tìm tệp âm thanh `.wav` tương ứng. Các tệp âm thanh được ghép nối bằng thư viện `pydub` với kỹ thuật chèn khoảng lặng 50 ms và làm mịn bờ ghép 10 ms nhằm tạo ra tín hiệu đầu ra liền mạch. Toàn bộ hệ thống được triển khai trên nền tảng Web với FastAPI, SQLite và HTML/CSS/JavaScript, cho phép người dùng nhập văn bản, chọn giọng đọc, nghe kết quả trực tiếp trên trình duyệt và tải xuống tệp `.wav`. Kết quả thực nghiệm cho thấy âm thanh tổng hợp rõ tiếng ở mức từ đơn, tuy nhiên ngữ điệu liên từ vẫn còn hạn chế so với cách phát âm liền mạch tự nhiên.
 
 ---
 
@@ -11,7 +11,7 @@
 Tổng hợp giọng nói từ văn bản (Text-to-Speech — TTS) là bài toán quan trọng trong lĩnh vực xử lý ngôn ngữ tự nhiên và đa phương tiện. Công nghệ TTS được ứng dụng rộng rãi trong nhiều lĩnh vực thực tế:
 
 - **Hỗ trợ người khiếm thị**: đọc tài liệu, sách nói, tin tức tự động.
-- **Trợ lý ảo & IoT**: tích hợp trong các thiết bị thông minh (Google Assistant, Siri, Alexa) để giao tiếp bằng giọng nói.
+- **Trợ lý ảo & IoT**: tích hợp trong các thiết bị thông minh (Google Assistant [https://assistant.google.com/] hay Siri [https://www.apple.com/vn/siri/]) để giao tiếp bằng giọng nói.
 - **Giáo dục**: hỗ trợ học phát âm ngoại ngữ, đọc bài cho trẻ em.
 - **Truyền thông đa phương tiện**: tự động tạo lời bình cho video, podcast, nội dung kỹ thuật số.
 
@@ -19,7 +19,7 @@ Tổng hợp giọng nói từ văn bản (Text-to-Speech — TTS) là bài toá
 
 ## 1.2. Mục tiêu đề tài
 
-Xây dựng hệ thống TTS tiếng Việt ở **mức từ (word-level)** dựa trên bộ ngữ liệu thu âm do chính các thành viên trong nhóm thực hiện. Cụ thể, hệ thống cần đạt được:
+Xây dựng hệ thống TTS tiếng Việt ở **mức từ (word-level)** dựa trên bộ ngữ liệu thu âm do chính thành viên trong nhóm thực hiện. Cụ thể, hệ thống cần đạt được:
 
 1. Thu âm và tổ chức bộ ngữ liệu âm thanh đơn từ tiếng Việt theo giọng đọc từng thành viên.
 2. Thiết kế cơ sở dữ liệu SQLite để quản lý quan hệ **từ — âm thanh — người đọc** cùng các đặc trưng trích xuất.
@@ -32,7 +32,7 @@ Xây dựng hệ thống TTS tiếng Việt ở **mức từ (word-level)** dự
 Hệ thống sử dụng phương pháp **tổng hợp ghép nối (concatenative synthesis)** — phương pháp cổ điển nhưng hiệu quả cho bài toán TTS mức từ. Ý tưởng cốt lõi: mỗi từ trong câu đầu vào được ánh xạ tới một tệp âm thanh `.wav` đã thu âm sẵn trong kho ngữ liệu, sau đó các tệp được ghép nối tuần tự có xử lý làm mịn biên.
 
 **Phạm vi**:
-- Ngữ liệu: tập hợp các từ đơn tiếng Việt thường dùng, thu âm bởi 2 thành viên nhóm.
+- Ngữ liệu: tập hợp các từ đơn tiếng Việt thường dùng, thu âm bởi thành viên nhóm.
 - Đầu vào: câu tiếng Việt (các từ đã có trong kho ngữ liệu).
 - Đầu ra: tệp âm thanh `.wav` tổng hợp.
 - Hệ thống hoạt động trên nền Web (trình duyệt), không yêu cầu cài đặt phần mềm phía người dùng.
@@ -52,7 +52,7 @@ Tập dữ liệu âm thanh bao gồm các tệp `.wav` thu âm đơn từ tiế
 | 1          | Nguyễn Thành Phát | Thu âm giọng đọc 1 |
 | 2          | Võ Trường Nguyên  | Thu âm giọng đọc 2 |
 
-Các tệp âm thanh được lưu tại thư mục `static/audio_corpus/` với định dạng WAV (Waveform Audio File Format), đảm bảo chất lượng gốc không nén. Dữ liệu mẫu ban đầu gồm 8 từ cơ bản: *các, bạn, con, cá, bè, ba, đang, đi*.
+Các tệp âm thanh được lưu tại thư mục `static/audio_corpus/` với định dạng WAV (Waveform Audio File Format), đảm bảo chất lượng gốc không nén.
 
 ### 2.1.2. Quy tắc mã hóa VNI
 
@@ -83,9 +83,9 @@ Các tệp âm thanh được lưu tại thư mục `static/audio_corpus/` với
 | Từ tiếng Việt | Phân tích              | Mã VNI   |
 |:--------------|:-----------------------|:---------|
 | đang          | đ → `d-`, ang, thanh 0 | `d-ang0` |
-| đi            | đ → `d-`, i, thanh 0   | `d-i0`   |
 | cá            | c, a, thanh 1 (sắc)    | `ca1`    |
 | bạn           | b, a, n, thanh 5 (nặng)| `ban5`   |
+| đi            | đ → `d-`, i, thanh 0   | `d-i0`   |
 
 Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ ánh xạ cho 67 ký tự nguyên âm có dấu tiếng Việt (bao gồm 6 biến thể thanh điệu cho mỗi nguyên âm: a/á/à/ả/ã/ạ, â/ấ/ầ/ẩ/ẫ/ậ, …) và phụ âm `đ`.
 
@@ -102,7 +102,7 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
          ▼
 ┌──────────────────────────┐
 │  Chuẩn hóa văn bản       │  normalize_text()
-│  • Chuyển chữ thường      │  - Bỏ dấu câu, ký tự đặc biệt
+│  • Chuyển chữ thường     │  - Bỏ dấu câu, ký tự đặc biệt
 │  • Loại bỏ dấu câu       │  - Chuẩn hóa khoảng trắng
 │  • Chuẩn hóa khoảng trắng│
 └────────┬─────────────────┘
@@ -115,49 +115,49 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
 └────────┬─────────────────┘
          │  ["bac1", "ba0", "d-ang0", "d-i0"]
          ▼
-┌──────────────────────────┐
-│  Tra cứu CSDL SQLite     │  get_audio_candidates()
-│  • JOIN Words ↔ Audio_Corpus│
-│  • Ưu tiên speaker được chọn│
-│  • Fallback sang speaker khác│
-└────────┬─────────────────┘
-         │  [path1.wav, path2.wav, ...]
+┌──────────────────────────── ┐
+│  Tra cứu CSDL SQLite        │  get_audio_candidates()
+│  • Kết nối từ ↔ Audio_Corpus│
+└────────┬────────────────────┘
+         │  [tệp1.wav, tệp2.wav, ...]
          ▼
 ┌──────────────────────────┐
 │  Ghép nối âm thanh (pydub)│  concatenate_audio()
-│  • Silence insertion 50ms │
-│  • Cross-fade 10ms        │
-│  • Export WAV              │
+│  • Chèn khoảng lặng 50 ms │
+│  • Làm mịn bờ ghép 10 ms  │
+│  • Xuất tệp WAV           │
 └────────┬─────────────────┘
          │
          ▼
 ┌──────────────────┐
-│  Tín hiệu âm thanh│  /static/temp_outputs/output.wav
-│  đầu ra (.wav)    │  → Phát trên trình duyệt / Tải xuống
+│  Âm thanh        │  /static/temp_outputs/output.wav
+│  đầu ra (.wav)   │  → Phát trên trình duyệt / Tải xuống
 └──────────────────┘
 ```
 
 ### 2.2.2. Giải thích luồng xử lý
 
-1. **Chuẩn hóa văn bản** (`vni_encoder.normalize_text`): Câu đầu vào được chuyển về chữ thường, loại bỏ tất cả dấu câu và ký tự đặc biệt bằng biểu thức chính quy `re.sub(r'[^\w\s]', '', text)`, chuẩn hóa nhiều khoảng trắng liên tiếp thành một.
+1. **Chuẩn hóa văn bản**: Câu đầu vào được chuyển về chữ thường, loại bỏ tất cả dấu câu và ký tự đặc biệt bằng biểu thức chính quy `re.sub(r'[^\w\s]', '', text)`, chuẩn hóa nhiều khoảng trắng liên tiếp thành một.
 
-2. **Mã hóa VNI** (`vni_encoder.encode_sentence`): Câu được tách thành danh sách từ đơn bằng `split()`. Mỗi từ được chuẩn hóa Unicode dạng NFC qua `unicodedata.normalize('NFC', ...)`, sau đó duyệt từng ký tự qua bảng tra `VNI_MAP` để thay thế nguyên âm có dấu và phụ âm `đ`, cuối cùng gắn mã thanh điệu vào cuối.
+2. **Mã hóa VNI**: Câu được tách thành danh sách từ đơn bằng `split()`. Mỗi từ được chuẩn hóa Unicode, sau đó duyệt từng ký tự qua bảng tra `VNI_MAP` để thay thế nguyên âm có dấu và phụ âm `đ`, cuối cùng gắn mã thanh điệu vào cuối.
 
-3. **Tra cứu CSDL** (`database.get_audio_candidates`): Với mỗi mã VNI, hệ thống thực hiện truy vấn JOIN giữa bảng `Words` và `Audio_Corpus` để tìm đường dẫn tệp `.wav`. Kết quả được sắp xếp ưu tiên: speaker được chọn trước (`CASE WHEN ac.speaker_id = ? THEN 0 ELSE 1 END`), nếu không có thì dùng dự phòng từ speaker khác. Nếu hoàn toàn không có audio, từ đó được ghi nhận vào bảng `Missing_Audio` và bỏ qua khi ghép.
+3. **Tra cứu CSDL**: Với mỗi mã VNI, hệ thống thực hiện truy vấn JOIN giữa bảng `Words` và `Audio_Corpus` để tìm đường dẫn tệp `.wav`. Nếu hoàn toàn không có audio, từ đó bị bỏ qua khi ghép.
 
-4. **Ghép nối âm thanh** (`tts_engine.concatenate_audio`): Sử dụng thư viện `pydub.AudioSegment` để đọc và ghép các tệp `.wav` tuần tự. Giữa hai từ liên tiếp được chèn khoảng lặng 50 ms (`AudioSegment.silent(duration=50)`) và áp dụng cross-fade 10 ms tại điểm ghép (`append(..., crossfade=10)`) nhằm giảm tiếng "click" và tạo chuyển tiếp mượt mà. File kết quả được xuất ra `static/temp_outputs/output.wav`.
+4. **Ghép nối âm thanh**: Sử dụng thư viện `pydub.AudioSegment` để đọc và ghép các tệp `.wav` tuần tự. Giữa hai từ liên tiếp được chèn khoảng lặng 50 ms (`AudioSegment.silent(duration=50)`) và áp dụng làm mịn bờ ghép 10 ms tại điểm ghép (`append(..., crossfade=10)`) nhằm giảm tiếng "click" và tạo chuyển tiếp mượt mà. File kết quả được xuất ra `static/temp_outputs/output.wav`.
 
-5. **Trả kết quả**: Backend trả về JSON chứa URL tệp âm thanh, danh sách mã VNI đã mã hóa, danh sách từ không tìm thấy (`not_found`) và thông tin các từ phải dùng speaker dự phòng (`fallback_used`). Frontend nhận kết quả, hiển thị trình phát audio và chip mã VNI (đánh dấu đỏ cho từ thiếu audio).
+5. **Trả kết quả**: Backend trả về JSON chứa URL tệp âm thanh, danh sách mã VNI đã mã hóa và danh sách từ không tìm thấy (`not_found`). Frontend nhận kết quả, hiển thị trình phát audio và chip mã VNI (đánh dấu đỏ cho từ thiếu audio).
 
 ### 2.2.3. Thành phần phần mềm (Công nghệ sử dụng)
 
-| Thành phần  | Công nghệ             | Vai trò                                                                                |
-|:------------|:----------------------|:---------------------------------------------------------------------------------------|
-| Backend API | **FastAPI** (Python)  | Xử lý yêu cầu HTTP, điều phối luồng TTS, cung cấp RESTful API (`/api/tts`, `/api/speakers`) |
-| CSDL        | **SQLite**            | Lưu trữ và quản lý dữ liệu từ vựng, giọng đọc, kho âm thanh và theo dõi audio thiếu   |
-| Frontend    | **HTML/CSS/JavaScript** | Giao diện Web tương tác: nhập liệu, chọn giọng đọc, trình phát audio tùy chỉnh         |
-| Xử lý audio | **pydub**             | Đọc, ghép nối, chèn silence, cross-fade và xuất tệp `.wav`                              |
-| Template    | **Jinja2**            | Render trang HTML động từ server với dữ liệu từ CSDL                                   |
+**Backend API — FastAPI (Python)**: Đóng vai trò là lớp trung gian xử lý toàn bộ yêu cầu HTTP từ phía người dùng. FastAPI tiếp nhận văn bản đầu vào, điều phối luồng xử lý TTS qua các module phụ trợ và cung cấp hai endpoint RESTful chính: `/api/tts` để tổng hợp âm thanh và `/api/speakers` để trả về danh sách giọng đọc.
+
+**Cơ sở dữ liệu — SQLite**: Là thành phần lưu trữ trung tâm của hệ thống, SQLite quản lý toàn bộ dữ liệu từ vựng (bảng `Words`), thông tin người thu âm (bảng `Speakers`) và kho âm thanh cùng đặc trưng trích xuất (bảng `Audio_Corpus`). Việc lựa chọn SQLite phù hợp với quy mô của đề tài nhờ tính nhẹ, không cần máy chủ riêng và dễ tích hợp với Python.
+
+**Frontend — HTML/CSS/JavaScript**: Cung cấp giao diện Web tương tác trực tiếp trên trình duyệt mà không yêu cầu cài đặt thêm phần mềm phía người dùng. Giao diện gồm ô nhập văn bản, trình phát audio tùy chỉnh và bảng hiển thị mã VNI — toàn bộ được xây dựng bằng HTML/CSS/JavaScript thuần, giao tiếp với backend qua Fetch API.
+
+**Xử lý âm thanh — pydub**: Thư viện Python chịu trách nhiệm toàn bộ quá trình xử lý tín hiệu âm thanh: đọc các tệp `.wav` từ kho ngữ liệu, ghép nối tuần tự theo thứ tự từ trong câu, chèn khoảng lặng 50 ms giữa các từ và áp dụng làm mịn 10 ms tại điểm ghép, sau đó xuất kết quả thành tệp `.wav` cuối cùng.
+
+**Template — Jinja2**: Đảm nhận việc render trang HTML động phía server. Jinja2 cho phép nhúng dữ liệu từ CSDL (danh sách bảng, bản ghi, thống kê) vào các template HTML trước khi gửi về trình duyệt, đặc biệt phục vụ trang Database Explorer (`/database`).
 
 ## 2.3. Quản lý và Lưu trữ CSDL
 
@@ -176,18 +176,6 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
                       │ energy_avg        │
                       └───────────────────┘
 
-┌───────────────────┐
-│   Missing_Audio   │
-├───────────────────┤
-│ PK missing_id     │
-│ vni_code          │
-│ original_word     │
-│ speaker_id        │
-│ request_count     │
-│ status            │
-│ first_seen        │
-│ last_seen         │
-└───────────────────┘
 ```
 
 ### 2.3.2. Bảng Words (Danh mục từ vựng)
@@ -204,7 +192,7 @@ CREATE TABLE IF NOT EXISTS Words (
 
 ### 2.3.3. Bảng Speakers (Thành viên thu âm)
 
-Lưu danh sách các thành viên đã thu âm, phục vụ cho tính năng chọn giọng đọc trên giao diện.
+Lưu danh sách các thành viên đã thu âm.
 
 ```sql
 CREATE TABLE IF NOT EXISTS Speakers (
@@ -231,23 +219,6 @@ CREATE TABLE IF NOT EXISTS Audio_Corpus (
 );
 ```
 
-### 2.3.5. Bảng Missing_Audio (Theo dõi audio còn thiếu)
-
-Bảng tự động ghi nhận các cặp (mã VNI, giọng đọc) chưa có audio khi người dùng yêu cầu. Cơ chế `ON CONFLICT ... DO UPDATE` cho phép đếm số lần yêu cầu (`request_count`) để ưu tiên bổ sung các từ phổ biến nhất.
-
-```sql
-CREATE TABLE IF NOT EXISTS Missing_Audio (
-    missing_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-    vni_code      TEXT NOT NULL,
-    original_word TEXT,
-    speaker_id    INTEGER NOT NULL,
-    request_count INTEGER NOT NULL DEFAULT 1,
-    status        TEXT NOT NULL DEFAULT 'pending',
-    first_seen    TEXT NOT NULL,
-    last_seen     TEXT NOT NULL,
-    UNIQUE (vni_code, speaker_id)
-);
-```
 
 ## 2.4. Trích rút đặc trưng & Thuật toán ghép nối âm thanh
 
@@ -307,8 +278,6 @@ final_audio.export("static/temp_outputs/output.wav", format="wav")
               └────────────┘
 ```
 
-**Cơ chế dự phòng (Fallback)**: Khi không tìm thấy audio của speaker được chọn, hệ thống tự động tìm audio từ speaker khác thông qua truy vấn sắp xếp ưu tiên. Thông tin dự phòng được ghi nhận vào `Missing_Audio` để quản trị viên bổ sung sau. Nếu hoàn toàn không có audio cho một từ ở bất kỳ speaker nào, từ đó bị bỏ qua và người dùng được thông báo.
-
 ---
 
 # 3. KẾT QUẢ VÀ THẢO LUẬN
@@ -329,7 +298,7 @@ final_audio.export("static/temp_outputs/output.wav", format="wav")
 
 Giao diện chính được thiết kế theo bố cục hai cột (two-column grid):
 
-- **Panel trái — Văn bản đầu vào**: gồm ô textarea cho phép nhập câu tiếng Việt (tối đa 500 ký tự có đếm realtime), dropdown chọn giọng đọc (hiển thị tên thành viên từ CSDL), thanh trạng thái hiển thị kết quả xử lý, và nút "Chuyển Đổi Thành Âm Thanh".
+- **Panel trái — Văn bản đầu vào**: gồm ô textarea cho phép nhập câu tiếng Việt (tối đa 500 ký tự có đếm realtime), thanh trạng thái hiển thị kết quả xử lý, và nút "Chuyển Đổi Thành Âm Thanh".
 
 - **Panel phải — Kết quả âm thanh**: hiển thị placeholder "Âm thanh sẽ xuất hiện ở đây sau khi bạn nhấn Chuyển Đổi" khi chưa có kết quả. Sau khi xử lý thành công, panel chuyển sang hiển thị thanh dạng sóng (waveform bars) có animation, trình phát audio tùy chỉnh với các nút Play/Pause, thanh tiến trình (seek-able), hiển thị thời gian, nút tải xuống, và dãy chip mã VNI.
 
@@ -370,26 +339,8 @@ Trình phát audio được xây dựng tùy chỉnh (không dùng controls mặ
 - Nút tải xuống file `.wav` kết quả.
 - Thanh waveform bars có animation khi đang phát.
 
-### 3.1.4. Xử lý từ không có audio
 
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 4: Trường hợp có từ thiếu audio
-    1. Nhập một câu có từ chưa thu âm, ví dụ: "các bạn đang học bài"
-       (giả sử "học" và "bài" chưa có trong kho audio)
-    2. Nhấn chuyển đổi
-    3. Chụp hình khi hiện cảnh báo "⚠ Đã bỏ qua X từ chưa có audio"
-    → Cần thấy: chip VNI có màu đỏ cho từ không tìm thấy
-    → Lưu ảnh: images/tu_khong_co_audio.png
--->
-
-*Hình 4: Cảnh báo khi có từ chưa có trong kho audio*
-
-Khi gặp từ chưa có audio trong CSDL, hệ thống:
-- Hiển thị cảnh báo vàng: "⚠ Đã bỏ qua N từ chưa có audio. Xem bảng Missing_Audio để bổ sung."
-- Đánh dấu chip mã VNI tương ứng bằng màu đỏ (nền `#ffebee`, chữ `#d32f2f`).
-- Tự động ghi nhận vào bảng `Missing_Audio` trong CSDL.
-- Vẫn ghép và phát các từ còn lại (bỏ qua từ thiếu).
-
-### 3.1.5. Trang Database Explorer
+### 3.1.4. Trang Database Explorer
 
 <!-- 📸 HƯỚNG DẪN CHỤP HÌNH 5: Trang Database Explorer — bảng Words
     1. Truy cập http://127.0.0.1:8000/database
@@ -412,7 +363,7 @@ Khi gặp từ chưa có audio trong CSDL, hệ thống:
 
 Trang Database Explorer (`/database`) cung cấp giao diện quản trị CSDL trực quan:
 - **Tổng quan thống kê**: 3 stat card hiển thị số bảng, số bản ghi trong bảng đang chọn, và số cột.
-- **Sidebar chọn bảng**: Danh sách 4 bảng (Audio_Corpus, Missing_Audio, Speakers, Words) cho phép nhấn chuyển đổi.
+- **Sidebar chọn bảng**: Danh sách 3 bảng (Audio_Corpus, Speakers, Words) cho phép nhấn chuyển đổi.
 - **Bảng dữ liệu**: Hiển thị tối đa 100 bản ghi với ô tìm kiếm realtime lọc theo nội dung.
 - **Form nhập liệu**: Hai form cho phép thêm từ mới vào bảng `Words` và thêm audio vào `Audio_Corpus` trực tiếp trên giao diện.
 
@@ -433,7 +384,6 @@ Trang Database Explorer (`/database`) cung cấp giao diện quản trị CSDL t
 | Độ rõ tiếng từng từ | Tốt          | Mỗi từ đơn phát rõ ràng, đúng thanh điệu vì sử dụng audio gốc thu âm |
 | Độ tự nhiên liên từ | Trung bình   | Có thể nhận ra ranh giới ghép giữa các từ; ngữ điệu chưa liền mạch |
 | Tốc độ xử lý       | Tốt          | Thời gian phản hồi < 1 giây cho câu 5–10 từ |
-| Khả năng dự phòng   | Tốt          | Tự động tìm speaker khác khi thiếu audio, thông báo rõ ràng cho người dùng |
 | Giao diện người dùng | Tốt         | Trực quan, responsive, có feedback trạng thái realtime |
 
 ### 3.2.2. Phân tích ưu/nhược điểm
@@ -441,9 +391,7 @@ Trang Database Explorer (`/database`) cung cấp giao diện quản trị CSDL t
 **Ưu điểm**:
 - Chất lượng từng từ đơn **cao và tự nhiên** vì sử dụng trực tiếp audio thu âm gốc, không qua mô hình sinh tổng hợp.
 - Hệ thống **dễ mở rộng**: chỉ cần thu âm thêm từ mới, thêm vào CSDL là có thể sử dụng ngay.
-- Cơ chế **fallback thông minh**: tự động chuyển sang giọng đọc khác khi thiếu audio, đồng thời ghi nhận để bổ sung sau.
 - **Kiến trúc module rõ ràng**: tách biệt encoder, database, engine và API server — dễ bảo trì và phát triển.
-- Bảng `Missing_Audio` giúp quản trị viên **ưu tiên thu âm** các từ được yêu cầu nhiều nhất (`request_count`).
 
 **Nhược điểm**:
 - **Ngữ điệu liên từ thiếu tự nhiên**: phương pháp ghép nối từ đơn không thể mô phỏng sự biến đổi pitch, cường độ và nhịp điệu giữa các từ trong câu hoàn chỉnh (coarticulation).
@@ -457,7 +405,13 @@ Trang Database Explorer (`/database`) cung cấp giao diện quản trị CSDL t
 
 ## 4.1. Tóm tắt kết quả
 
-Đề tài đã hoàn thành việc xây dựng hệ thống TTS tiếng Việt mức từ sử dụng phương pháp tổng hợp ghép nối, đáp ứng đầy đủ các yêu cầu đặt ra: (1) Thu âm và tổ chức bộ ngữ liệu âm thanh đơn từ theo quy ước mã hóa VNI; (2) Thiết kế CSDL SQLite gồm 4 bảng quan hệ quản lý từ vựng, giọng đọc, kho âm thanh và theo dõi audio thiếu; (3) Xây dựng module mã hóa VNI hỗ trợ đầy đủ 6 thanh điệu và 7 ký tự đặc biệt tiếng Việt; (4) Cài đặt engine ghép nối với kỹ thuật silence insertion và cross-fade; (5) Triển khai giao diện Web hoàn chỉnh trên nền FastAPI với trình phát audio tùy chỉnh, trang quản trị CSDL và cơ chế dự phòng thông minh. Kết quả cho thấy âm thanh tổng hợp rõ ràng ở mức từ đơn, hệ thống phản hồi nhanh và giao diện trực quan.
+Đề tài đã hoàn thành việc xây dựng hệ thống TTS tiếng Việt mức từ sử dụng phương pháp tổng hợp ghép nối, đáp ứng đầy đủ các yêu cầu đặt ra: 
+- Thu âm và tổ chức bộ ngữ liệu âm thanh đơn từ theo quy ước mã hóa VNI; 
+- Thiết kế CSDL SQLite gồm 3 bảng quan hệ quản lý từ vựng, giọng đọc và kho âm thanh; 
+- Xây dựng module mã hóa VNI hỗ trợ đầy đủ 6 thanh điệu và 7 ký tự đặc biệt tiếng Việt; 
+- Cài đặt engine ghép nối với kỹ thuật silence insertion và cross-fade; 
+- Triển khai giao diện Web hoàn chỉnh trên nền FastAPI với trình phát audio tùy chỉnh và trang quản trị CSDL. 
+Kết quả cho thấy âm thanh tổng hợp rõ ràng ở mức từ đơn, hệ thống phản hồi nhanh và giao diện trực quan.
 
 ## 4.2. Hạn chế & Hướng phát triển
 
@@ -536,7 +490,6 @@ def concatenate_audio(vni_codes, speaker_id):
                 break
 
         if selected_path is None:
-            database.record_missing_audio(vni, speaker_id)
             not_found.append(vni)
             continue
 
