@@ -7,7 +7,8 @@ Endpoints:
     POST /api/tts        -> Tổng hợp âm thanh từ văn bản
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -57,6 +58,54 @@ async def index(request: Request):
     )
 
 
+@app.get("/database", response_class=HTMLResponse, summary="Xem dữ liệu CSDL")
+async def database_view(request: Request, table: str | None = None):
+    """Hiển thị schema và dữ liệu của các bảng trong CSDL SQLite."""
+    snapshot = database.get_database_snapshot(table)
+    return templates.TemplateResponse(
+        request,
+        "database.html",
+        snapshot,
+    )
+
+
+@app.post("/database/words", summary="Thêm từ vào Words")
+async def create_word(
+    original_word: str = Form(...),
+    vni_code: str = Form(...),
+):
+    try:
+        database.insert_word(original_word, vni_code)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except database.sqlite3.IntegrityError as error:
+        raise HTTPException(status_code=409, detail="Mã VNI đã tồn tại.") from error
+    return RedirectResponse("/database?table=Words", status_code=303)
+
+
+@app.post("/database/audio", summary="Thêm audio vào Audio_Corpus")
+async def create_audio(
+    word_id: int = Form(...),
+    speaker_id: int = Form(...),
+    file_path: str = Form(...),
+    duration_ms: float | None = Form(None),
+    pitch_avg: float | None = Form(None),
+    energy_avg: float | None = Form(None),
+):
+    try:
+        database.insert_audio(
+            word_id, speaker_id, file_path, duration_ms, pitch_avg, energy_avg
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except database.sqlite3.IntegrityError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="word_id hoặc speaker_id không tồn tại.",
+        ) from error
+    return RedirectResponse("/database?table=Audio_Corpus", status_code=303)
+
+
 @app.get("/api/speakers", summary="Danh sách giọng đọc")
 async def get_speakers():
     """
@@ -82,5 +131,12 @@ async def text_to_speech(body: TTSRequest):
         dict: { "audio_url": "/static/temp_outputs/output.wav" }
     """
     vni_codes = vni_encoder.encode_sentence(body.text)
-    audio_url, not_found = tts_engine.concatenate_audio(vni_codes, body.speaker_id)
-    return {"audio_url": audio_url, "vni_codes": vni_codes, "not_found": not_found}
+    audio_url, not_found, fallback_used = tts_engine.concatenate_audio(
+        vni_codes, body.speaker_id
+    )
+    return {
+        "audio_url": audio_url,
+        "vni_codes": vni_codes,
+        "not_found": not_found,
+        "fallback_used": fallback_used,
+    }

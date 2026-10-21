@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Trình xem dữ liệu cơ sở dữ liệu TTS" />
+  <title>Database Explorer · TTS Tiếng Việt</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body class="database-page">
+  <div class="app-wrapper">
+    <header class="database-header">
+      <a class="database-brand" href="/">
+        <span class="database-brand-icon">◈</span>
+        <span>
+          <strong>Database Explorer</strong>
+          <small>TTS Tiếng Việt · SQLite</small>
+        </span>
+      </a>
+      <a class="database-back" href="/">← Về trang TTS</a>
+    </header>
+
+    <main class="database-main">
+      <section class="database-intro">
+        <div>
+          <p class="eyebrow">DATA CONSOLE</p>
+          <h1>Khám phá dữ liệu</h1>
+          <p class="database-description">
+          Theo dõi schema, dữ liệu và các từ đang chờ bổ sung audio cho hệ thống tổng hợp giọng nói.
+          </p>
+        </div>
+        <div class="database-status"><span class="dot"></span> SQLite đang hoạt động</div>
+      </section>
+
+      <section class="database-stats" aria-label="Tổng quan cơ sở dữ liệu">
+        <div class="database-stat-card">
+          <span class="stat-label">BẢNG DỮ LIỆU</span>
+          <strong>{{ tables|length }}</strong>
+          <span class="stat-hint">bảng trong database</span>
+        </div>
+        <div class="database-stat-card">
+          <span class="stat-label">BẢN GHI</span>
+          <strong>{{ total }}</strong>
+          <span class="stat-hint">bản ghi trong bảng đang chọn</span>
+        </div>
+        <div class="database-stat-card">
+          <span class="stat-label">CỘT HIỂN THỊ</span>
+          <strong>{{ columns|length }}</strong>
+          <span class="stat-hint">trường dữ liệu</span>
+        </div>
+      </section>
+
+      <section class="database-workspace">
+        <aside class="database-sidebar">
+          <div class="sidebar-heading">
+            <span class="panel-icon violet">▦</span>
+            <div>
+              <h2>Tables</h2>
+              <p>Chọn bảng để xem dữ liệu</p>
+            </div>
+          </div>
+          <nav class="table-list" aria-label="Danh sách bảng">
+            {% for table_name in tables %}
+            <a class="table-link {% if table_name == selected_table %}active{% endif %}"
+              href="/database?table={{ table_name }}">
+              <span class="table-link-icon">▤</span>
+              <span>{{ table_name }}</span>
+              {% if table_name == selected_table %}<span class="table-arrow">→</span>{% endif %}
+            </a>
+            {% else %}
+            <p class="empty-state">Chưa có bảng dữ liệu.</p>
+            {% endfor %}
+          </nav>
+        </aside>
+
+        <section class="database-table-panel">
+          <div class="data-panel-header">
+            <div>
+              <p class="eyebrow">TABLE / {{ selected_table or 'EMPTY' }}</p>
+              <h2>{{ selected_table or 'Chưa có dữ liệu' }}</h2>
+            </div>
+            <label class="table-search">
+              <span>⌕</span>
+              <input id="table-search" type="search" placeholder="Tìm trong bảng..." aria-label="Tìm trong bảng" />
+            </label>
+          </div>
+          {% if selected_table == 'Missing_Audio' %}
+          <!-- <p class="table-note">
+            Bảng này tự động ghi nhận các cặp từ và giọng đọc chưa có audio. Có thể dùng
+            <code>request_count</code> để ưu tiên bổ sung các từ xuất hiện nhiều nhất.
+          </p> -->
+          {% endif %}
+          {% if rows %}
+          <div class="table-meta">
+            <span>Hiển thị {{ rows|length }} / {{ total }} bản ghi</span>
+            <span>{{ columns|length }} cột</span>
+          </div>
+          <div class="data-table-wrap">
+            <table id="database-table">
+              <thead>
+                <tr>
+                  {% for column in columns %}<th>{{ column }}</th>{% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rows %}
+                <tr>
+                  {% for column in columns %}
+                  <td>
+                    {% if row[column] is none %}
+                    <span class="null-value">NULL</span>
+                    {% else %}
+                    {{ row[column] }}
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="database-empty">
+            <div class="database-empty-icon">⌁</div>
+            <h3>Bảng chưa có bản ghi</h3>
+            <p>Dữ liệu mới sẽ xuất hiện tại đây khi được thêm vào database.</p>
+          </div>
+          {% endif %}
+        </section>
+      </section>
+
+      <section class="database-forms" aria-label="Nhập dữ liệu">
+        <div class="database-form-card">
+          <div class="form-card-heading">
+            <span class="panel-icon violet">＋</span>
+            <div>
+              <h2>Thêm từ mới</h2>
+              <p>Nhập dữ liệu vào bảng <code>Words</code></p>
+            </div>
+          </div>
+          <form method="post" action="/database/words" class="database-form">
+            <label>Từ gốc<input name="original_word" type="text" placeholder="Ví dụ: bác" required /></label>
+            <label>Mã VNI<input name="vni_code" type="text" placeholder="Ví dụ: bac1" required /></label>
+            <button class="database-submit" type="submit">Lưu từ</button>
+          </form>
+        </div>
+
+        <div class="database-form-card">
+          <div class="form-card-heading">
+            <span class="panel-icon blue">♫</span>
+            <div>
+              <h2>Thêm audio corpus</h2>
+              <p>Nhập dữ liệu vào bảng <code>Audio_Corpus</code></p>
+            </div>
+          </div>
+          <form method="post" action="/database/audio" class="database-form audio-form">
+            <label>Từ
+              <select name="word_id" required>
+                {% for word in words %}<option value="{{ word.word_id }}">{{ word.original_word }} ({{ word.vni_code }})</option>{% endfor %}
+              </select>
+            </label>
+            <label>Giọng đọc
+              <select name="speaker_id" required>
+                {% for speaker in speakers %}<option value="{{ speaker.speaker_id }}">{{ speaker.speaker_name }}</option>{% endfor %}
+              </select>
+            </label>
+            <label>Đường dẫn file WAV<input name="file_path" type="text" placeholder="static/audio_corpus/bac1.wav" required /></label>
+            <div class="form-grid">
+              <label>Thời lượng (ms)<input name="duration_ms" type="number" step="any" min="0" /></label>
+              <label>Pitch trung bình<input name="pitch_avg" type="number" step="any" /></label>
+              <label>Năng lượng trung bình<input name="energy_avg" type="number" step="any" /></label>
+            </div>
+            <button class="database-submit blue-submit" type="submit">Lưu audio</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const search = document.getElementById('table-search');
+    const rows = document.querySelectorAll('#database-table tbody tr');
+    search?.addEventListener('input', () => {
+      const query = search.value.trim().toLowerCase();
+      rows.forEach(row => {
+        row.hidden = query && !row.textContent.toLowerCase().includes(query);
+      });
+    });
+  </script>
+</body>
+
+</html>

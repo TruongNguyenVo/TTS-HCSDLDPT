@@ -75,8 +75,23 @@ btnConvert.addEventListener('click', async () => {
     const data = await response.json();
     // data = { audio_url: "...", vni_codes: [...], not_found: [...] }
 
-    showAudioResult(data.audio_url, data.vni_codes || [], data.not_found || []);
-    setStatus('success', '✅ Chuyển đổi thành công!');
+    const notFound = data.not_found || [];
+    const fallbackUsed = data.fallback_used || [];
+    showAudioResult(data.audio_url, data.vni_codes || [], notFound);
+
+    if (notFound.length > 0) {
+      setStatus(
+        'error',
+        `⚠ Đã bỏ qua ${notFound.length} từ chưa có audio. Xem bảng Missing_Audio để bổ sung.`
+      );
+    } else if (fallbackUsed.length > 0) {
+      setStatus(
+        'success',
+        `✅ Chuyển đổi thành công (dùng audio dự phòng cho ${fallbackUsed.length} từ).`
+      );
+    } else {
+      setStatus('success', '✅ Chuyển đổi thành công!');
+    }
 
   } catch (err) {
     console.error('[TTS]', err);

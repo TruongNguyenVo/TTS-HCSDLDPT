@@ -32,7 +32,10 @@ python -m uvicorn app.main:app --reload --port 8000
 pip install -r requirements.txt
 
 # Cài thủ công từng thư viện
-pip install fastapi uvicorn[standard] pydub python-multipart jinja2 aiofiles
+pip install fastapi uvicorn[standard] pydub audioop-lts python-multipart jinja2 aiofiles
+
+# Python 3.13+ cần audioop-lts để pydub đọc và ghép file WAV
+pip install audioop-lts
 
 # Kiểm tra thư viện đã cài
 pip list

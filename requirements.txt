@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
 pydub
+# Python 3.13+ no longer bundles audioop; pydub uses this compatibility module.
+audioop-lts
 python-multipart
 jinja2
 aiofiles

@@ -58,6 +58,23 @@ CSDL được thiết kế gồm 3 bảng quan hệ để quản lý ngữ liệ
 | `pitch_avg` | `REAL` | Độ cao trung bình (Hz) |
 | `energy_avg` | `REAL` | Năng lượng trung bình tín hiệu |
 
+### Bảng `Missing_Audio` (Theo dõi audio còn thiếu)
+| Thuộc tính | Kiểu dữ liệu | Mô tả |
+| :--- | :--- | :--- |
+| `missing_id` | `INTEGER PRIMARY KEY` | Mã yêu cầu thiếu audio |
+| `vni_code` | `TEXT` | Mã VNI cần bổ sung |
+| `original_word` | `TEXT` | Từ tiếng Việt tương ứng, nếu đã có trong `Words` |
+| `speaker_id` | `INTEGER` | Giọng đọc đang được yêu cầu |
+| `request_count` | `INTEGER` | Số lần từ này được yêu cầu nhưng chưa có audio |
+| `status` | `TEXT` | Trạng thái, mặc định là `pending` |
+| `first_seen` | `TEXT` | Thời điểm phát hiện lần đầu |
+| `last_seen` | `TEXT` | Thời điểm phát hiện gần nhất |
+
+Khi không có audio của speaker được chọn, hệ thống sẽ tìm audio của speaker khác
+làm dự phòng. Cặp `vni_code` và `speaker_id` vẫn được ghi vào `Missing_Audio`
+để quản trị viên bổ sung audio đúng giọng đọc sau này. Nếu không có audio ở bất
+kỳ speaker nào, từ đó được đưa vào `not_found` và bị bỏ qua khi ghép câu.
+
 ---
 
 ## 3. Các Module & Hàm Cần Thiết
@@ -76,6 +93,8 @@ Quản lý kết nối và truy vấn CSDL SQLite.
 
 * **`init_db()`**: Tự động tạo bảng và nạp dữ liệu ban đầu nếu chưa có.
 * **`get_audio_path(vni_code: str, speaker_id: int) -> str`**: Tra cứu đường dẫn file `.wav` tương ứng với mã VNI và giọng đọc đã chọn.
+* **`get_audio_candidates(vni_code: str, speaker_id: int) -> list[dict]`**: Lấy audio của speaker được chọn trước, sau đó đến các speaker khác để dùng dự phòng.
+* **`record_missing_audio(vni_code: str, speaker_id: int) -> None`**: Ghi nhận hoặc tăng số lần yêu cầu một audio chưa có.
 * **`get_all_speakers() -> list[dict]`**: Lấy danh sách tất cả các giọng đọc để hiển thị trên giao diện.
 
 ### 3.3. Module `tts_engine.py` (Xử lý ghép nối âm thanh)
