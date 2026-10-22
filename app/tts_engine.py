@@ -13,6 +13,7 @@ from app import database
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(BASE_DIR, "static", "temp_outputs")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "output.wav")
+PUNCTUATION_PAUSES = {",": 150, ".": 350}
 
 def concatenate_audio(
     vni_codes: list[str], speaker_id: int
@@ -44,6 +45,14 @@ def concatenate_audio(
     fallback_used = []
     
     for vni in vni_codes:
+        if vni in PUNCTUATION_PAUSES:
+            if len(final_audio) > 0:
+                final_audio = final_audio.append(
+                    AudioSegment.silent(duration=PUNCTUATION_PAUSES[vni]),
+                    crossfade=0,
+                )
+            continue
+
         selected_path = None
         selected_speaker_id = None
         for candidate in database.get_audio_candidates(vni, speaker_id):

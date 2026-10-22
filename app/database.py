@@ -9,11 +9,13 @@ Các hàm chính:
 
 import sqlite3
 import os
+import csv
 from datetime import datetime, timezone
 
 # Đường dẫn tuyệt đối đến file database
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "database.db")
+VOICE_LIST_PATH = os.path.join(BASE_DIR, "source_test", "voice_list _22_10_2026.csv")
 
 
 def get_connection() -> sqlite3.Connection:
@@ -96,6 +98,7 @@ def init_db():
 
     # --- Nạp dữ liệu mẫu nếu chưa có ---
     _seed_sample_data(conn)
+    import_voice_list(conn)
 
     conn.close()
     print("[DB] Database initialized successfully!")
@@ -169,6 +172,89 @@ def _seed_sample_data(conn: sqlite3.Connection):
         f"[DB] Seed checked {len(sample_words)} sample words; "
         f"inserted {inserted_count} new audio records."
     )
+
+
+def import_voice_list(
+    conn: sqlite3.Connection,
+    csv_path: str = VOICE_LIST_PATH,
+    speaker_id: int = 1,
+) -> dict[str, int]:
+    """Import words and audio paths from ``voice_list.csv``.
+
+    The CSV may contain several recordings for one VNI code.  They are kept
+    as separate audio records for the same speaker, and the unique index makes
+    repeated imports safe.
+    """
+    if not os.path.isfile(csv_path):
+        raise FileNotFoundError(f"Không tìm thấy file danh sách giọng đọc: {csv_path}")
+
+    speaker = conn.execute(
+        "SELECT speaker_id FROM Speakers WHERE speaker_id = ?", (speaker_id,)
+    ).fetchone()
+    if speaker is None:
+        raise ValueError(f"Speaker ID không tồn tại: {speaker_id}")
+
+    imported_words = 0
+    imported_audio = 0
+    skipped_rows = 0
+
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as csv_file:
+        reader = csv.DictReader(csv_file)
+        required_columns = {"vni", "voice_name", "voice_file"}
+        if not required_columns.issubset(reader.fieldnames or set()):
+            raise ValueError(
+                "voice_list.csv phải có các cột: vni, voice_name, voice_file"
+            )
+
+        for row in reader:
+            vni_code = (row.get("vni") or "").strip()
+            original_word = (row.get("voice_name") or "").strip()
+            voice_file = (row.get("voice_file") or "").strip()
+            if not vni_code or not original_word or not voice_file:
+                skipped_rows += 1
+                continue
+
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO Words (original_word, vni_code)
+                VALUES (?, ?)
+                """,
+                (original_word, vni_code),
+            )
+            imported_words += cursor.rowcount
+            word = conn.execute(
+                "SELECT word_id FROM Words WHERE vni_code = ?", (vni_code,)
+            ).fetchone()
+
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO Audio_Corpus
+                    (word_id, speaker_id, file_path, duration_ms, pitch_avg, energy_avg)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    word["word_id"],
+                    speaker_id,
+                    os.path.join("static", "audio_corpus", voice_file).replace(
+                        os.sep, "/"
+                    ),
+                    None,
+                    None,
+                    None,
+                ),
+            )
+            imported_audio += cursor.rowcount
+
+    conn.commit()
+    print(
+        f"[DB] Imported voice list: {imported_words} words, "
+        f"{imported_audio} audio records, {skipped_rows} skipped rows."
+    )
+    return {
+        "words": imported_words,
+        "audio": imported_audio,
+        "skipped": skipped_rows,
+    }
 
 
 def get_audio_path(vni_code: str, speaker_id: int) -> str | None:

@@ -93,47 +93,9 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
 
 ### 2.2.1. Sơ đồ khối (Block Diagram)
 
-```
-┌──────────────────┐
-│  Văn bản đầu vào │  (Ví dụ: "bác ba đang đi")
-│  (Câu tiếng Việt)│
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────────────┐
-│  Chuẩn hóa văn bản       │  normalize_text()
-│  • Chuyển chữ thường     │  - Bỏ dấu câu, ký tự đặc biệt
-│  • Loại bỏ dấu câu       │  - Chuẩn hóa khoảng trắng
-│  • Chuẩn hóa khoảng trắng│
-└────────┬─────────────────┘
-         │  "bác ba đang đi"
-         ▼
-┌──────────────────────────┐
-│  Mã hóa VNI              │  word_to_vni() cho từng từ
-│  • Tách câu thành từ đơn  │  encode_sentence()
-│  • Chuyển đổi theo VNI_MAP│
-└────────┬─────────────────┘
-         │  ["bac1", "ba0", "d-ang0", "d-i0"]
-         ▼
-┌──────────────────────────── ┐
-│  Tra cứu CSDL SQLite        │  get_audio_candidates()
-│  • Kết nối từ ↔ Audio_Corpus│
-└────────┬────────────────────┘
-         │  [tệp1.wav, tệp2.wav, ...]
-         ▼
-┌──────────────────────────┐
-│  Ghép nối âm thanh (pydub)│  concatenate_audio()
-│  • Chèn khoảng lặng 50 ms │
-│  • Làm mịn bờ ghép 10 ms  │
-│  • Xuất tệp WAV           │
-└────────┬─────────────────┘
-         │
-         ▼
-┌──────────────────┐
-│  Âm thanh        │  /static/temp_outputs/output.wav
-│  đầu ra (.wav)   │  → Phát trên trình duyệt / Tải xuống
-└──────────────────┘
-```
+![Sơ đồ khối quy trình chuyển văn bản tiếng Việt thành giọng nói](./quytrinh.png)
+
+**Hình 2.1.** Sơ đồ khối quy trình chuyển văn bản tiếng Việt thành giọng nói.
 
 ### 2.2.2. Giải thích luồng xử lý
 
@@ -148,6 +110,8 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
 5. **Trả kết quả**: Backend trả về JSON chứa URL tệp âm thanh, danh sách mã VNI đã mã hóa và danh sách từ không tìm thấy (`not_found`). Frontend nhận kết quả, hiển thị trình phát audio và chip mã VNI (đánh dấu đỏ cho từ thiếu audio).
 
 ### 2.2.3. Thành phần phần mềm (Công nghệ sử dụng)
+
+![Kiến trúc tổng quan](./kientructongquan.png)
 
 **Backend API — FastAPI (Python)**: Đóng vai trò là lớp trung gian xử lý toàn bộ yêu cầu HTTP từ phía người dùng. FastAPI tiếp nhận văn bản đầu vào, điều phối luồng xử lý TTS qua các module phụ trợ và cung cấp hai endpoint RESTful chính: `/api/tts` để tổng hợp âm thanh và `/api/speakers` để trả về danh sách giọng đọc.
 
@@ -269,111 +233,46 @@ final_audio.export("static/temp_outputs/output.wav", format="wav")
 
 - **Làm mịn bờ ghép (Cross-fading — 10 ms)**: Tại điểm nối giữa hai đoạn audio, kỹ thuật cross-fade tạo vùng chuyển tiếp mượt bằng cách giảm dần biên độ đoạn trước (fade-out) đồng thời tăng dần biên độ đoạn sau (fade-in). Điều này loại bỏ hiện tượng "click" hoặc tiếng giật do sự khác biệt biên độ đột ngột tại điểm ghép.
 
-```
-Đoạn trước      Silence 50ms      Đoạn sau
-────────╲     ┌────────────┐     ╱────────
-         ╲    │            │    ╱
-          ╲───┤ cross-fade ├───╱
-              │   10ms     │
-              └────────────┘
-```
+![Vị trí ghép nối giữa các từ](./vitrighepnoi.png)
 
 ---
 
 # 3. KẾT QUẢ VÀ THẢO LUẬN
 
-## 3.1. Giao diện và Đemo Chương trình
+## 3.1. Giao diện và Demo chương trình
 
 ### 3.1.1. Trang chủ — Giao diện tổng hợp TTS
 
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 1: Trang chủ (trạng thái ban đầu)
-    1. Chạy server: uvicorn app.main:app --reload
-    2. Mở trình duyệt tại http://127.0.0.1:8000
-    3. Chụp toàn bộ trang chủ khi chưa nhập gì (trạng thái mặc định)
-    → Hiển thị: Panel "Văn Bản Đầu Vào" (bên trái) và Panel "Kết Quả Âm Thanh" (bên phải)
-    → Lưu ảnh vào thư mục báo cáo, ví dụ: images/giao_dien_trang_chu.png
--->
+![Giao diện trang chủ](./giaodien_input.png)
 
-*Hình 1: Giao diện trang chủ hệ thống TTS tiếng Việt*
+*Hình 1: Giao diện ban đầu của hệ thống TTS tiếng Việt*
 
-Giao diện chính được thiết kế theo bố cục hai cột (two-column grid):
+Hệ thống được triển khai dưới dạng ứng dụng Web và truy cập qua trình duyệt tại địa chỉ máy chủ cục bộ. Giao diện sử dụng bố cục hai cột trên nền tối, giúp người dùng đồng thời theo dõi nội dung đầu vào và kết quả xử lý:
 
-- **Panel trái — Văn bản đầu vào**: gồm ô textarea cho phép nhập câu tiếng Việt (tối đa 500 ký tự có đếm realtime), thanh trạng thái hiển thị kết quả xử lý, và nút "Chuyển Đổi Thành Âm Thanh".
+- **Panel trái — Văn bản đầu vào**: gồm tiêu đề chức năng, ô nhập văn bản tiếng Việt và bộ đếm số ký tự theo thời gian thực. Khi chưa nhập nội dung, ô văn bản hiển thị gợi ý mẫu “Ví dụ: bác ba đi cảng...”. Bên dưới là nút **Chuyển Đổi Thành Âm Thanh**, dùng để bắt đầu quá trình tổng hợp.
 
-- **Panel phải — Kết quả âm thanh**: hiển thị placeholder "Âm thanh sẽ xuất hiện ở đây sau khi bạn nhấn Chuyển Đổi" khi chưa có kết quả. Sau khi xử lý thành công, panel chuyển sang hiển thị thanh dạng sóng (waveform bars) có animation, trình phát audio tùy chỉnh với các nút Play/Pause, thanh tiến trình (seek-able), hiển thị thời gian, nút tải xuống, và dãy chip mã VNI.
+- **Panel phải — Kết quả âm thanh**: ở trạng thái ban đầu, khu vực này hiển thị biểu tượng âm nhạc và thông báo cho biết âm thanh sẽ xuất hiện sau khi người dùng nhấn nút chuyển đổi. Cách bố trí này giúp phân biệt rõ trạng thái chưa có kết quả với trạng thái đã tổng hợp xong.
 
 ### 3.1.2. Quá trình tổng hợp âm thanh
 
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 2: Kết quả tổng hợp thành công
-    1. Nhập vào ô text: "các bạn con cá"
-    2. Giữ giọng đọc mặc định (Nguyễn Thành Phát)
-    3. Nhấn nút "Chuyển Đổi Thành Âm Thanh"
-    4. Chờ xử lý xong, chụp hình khi hiện thanh trạng thái "✅ Chuyển đổi thành công!"
-    → Cần thấy: trình phát audio, waveform bars, chip VNI (cac1, ban5, con0, ca1)
-    → Lưu ảnh: images/ket_qua_thanh_cong.png
--->
+![Giao diện kết quả quá trình tổng hợp âm thanh](./giaodien_output.png)
 
-*Hình 2: Kết quả tổng hợp thành công với câu "các bạn con cá"*
+*Hình 2: Giao diện sau khi tổng hợp âm thanh thành công*
 
-Khi người dùng nhập văn bản và nhấn nút chuyển đổi:
-1. Nút chuyển sang trạng thái loading (hiện spinner, vô hiệu hóa click).
-2. Frontend gửi yêu cầu POST đến `/api/tts` với JSON `{"text": "...", "speaker_id": 1}`.
-3. Backend xử lý và trả về kết quả.
-4. Thanh trạng thái hiển thị "✅ Chuyển đổi thành công!".
-5. Panel kết quả hiện trình phát audio với waveform animation và dãy chip mã VNI.
+Quy trình demo được thực hiện với câu:
 
-### 3.1.3. Trình phát audio tùy chỉnh
+> “Cô bảo: Các con cùng đọc bài, học và làm việc. Sau khi học xong, em về. Cuộc sống có mẹ, có bạn, có cô và có người yêu thương nên thật vui, thật đẹp.”
 
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 3: Trình phát audio đang chơi nhạc
-    1. Sau khi chuyển đổi thành công, nhấn nút Play ▶
-    2. Chụp hình khi audio đang phát (waveform bars animate, nút đổi thành ⏸)
-    → Lưu ảnh: images/trinh_phat_audio.png
--->
+Các bước thực hiện và kết quả quan sát được như sau:
 
-*Hình 3: Trình phát audio tùy chỉnh với waveform animation đang phát*
+1. Người dùng nhập câu tiếng Việt vào ô **Nội dung văn bản**. Bộ đếm ký tự cập nhật theo nội dung đã nhập.
+2. Người dùng nhấn nút **Chuyển Đổi Thành Âm Thanh**. Frontend gửi yêu cầu `POST /api/tts` với nội dung văn bản và mã giọng đọc được chọn.
+3. Backend chuẩn hóa câu, mã hóa từng từ sang mã VNI, tra cứu các tệp `.wav` tương ứng trong SQLite và ghép nối các đoạn âm thanh.
+4. Sau khi xử lý hoàn tất, panel bên trái hiển thị thông báo màu xanh **“Chuyển đổi thành công!”**.
+5. Panel bên phải hiển thị hiệu ứng dạng sóng, trình phát âm thanh với nút phát/tạm dừng, thanh tiến trình, thời lượng và nút tải tệp kết quả. Trong hình minh họa, thời lượng bản ghi là khoảng 28 giây.
+6. Danh sách **Mã VNI được mã hóa** được hiển thị dưới dạng các chip riêng biệt. Danh sách này cho phép kiểm tra trực quan kết quả chuyển đổi; dấu phẩy và dấu chấm cũng được giữ lại như các token riêng để thể hiện vị trí ngắt nghỉ trong câu.
 
-Trình phát audio được xây dựng tùy chỉnh (không dùng controls mặc định của trình duyệt) với các tính năng:
-- Nút Play/Pause với chuyển đổi biểu tượng (▶ ↔ ⏸).
-- Thanh tiến trình cho phép click để seek đến vị trí bất kỳ.
-- Hiển thị thời gian hiện tại và tổng thời lượng (format m:ss).
-- Nút tải xuống file `.wav` kết quả.
-- Thanh waveform bars có animation khi đang phát.
-
-
-### 3.1.4. Trang Database Explorer
-
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 5: Trang Database Explorer — bảng Words
-    1. Truy cập http://127.0.0.1:8000/database
-    2. Nhấn chọn bảng "Words" ở sidebar trái
-    3. Chụp toàn bộ trang
-    → Cần thấy: header, stat cards (số bảng, số bản ghi, số cột), sidebar, bảng dữ liệu
-    → Lưu ảnh: images/database_words.png
--->
-
-*Hình 5: Trang Database Explorer — Bảng Words*
-
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 6: Trang Database Explorer — bảng Audio_Corpus
-    1. Nhấn chọn bảng "Audio_Corpus" ở sidebar
-    2. Chụp toàn bộ trang
-    → Cần thấy: các cột audio_id, word_id, speaker_id, file_path, duration_ms, pitch_avg, energy_avg
-    → Lưu ảnh: images/database_audio_corpus.png
--->
-
-*Hình 6: Trang Database Explorer — Bảng Audio_Corpus*
-
-Trang Database Explorer (`/database`) cung cấp giao diện quản trị CSDL trực quan:
-- **Tổng quan thống kê**: 3 stat card hiển thị số bảng, số bản ghi trong bảng đang chọn, và số cột.
-- **Sidebar chọn bảng**: Danh sách 3 bảng (Audio_Corpus, Speakers, Words) cho phép nhấn chuyển đổi.
-- **Bảng dữ liệu**: Hiển thị tối đa 100 bản ghi với ô tìm kiếm realtime lọc theo nội dung.
-- **Form nhập liệu**: Hai form cho phép thêm từ mới vào bảng `Words` và thêm audio vào `Audio_Corpus` trực tiếp trên giao diện.
-
-<!-- 📸 HƯỚNG DẪN CHỤP HÌNH 7: Form thêm dữ liệu
-    1. Cuộn xuống phần form thêm dữ liệu phía dưới trang Database Explorer
-    2. Chụp hình cả hai form: "Thêm từ mới" và "Thêm audio corpus"
-    → Lưu ảnh: images/database_forms.png
--->
-
-*Hình 7: Form thêm từ mới và thêm audio corpus*
+Demo cho thấy hệ thống thực hiện đầy đủ chu trình từ nhập văn bản, mã hóa VNI, tra cứu dữ liệu, ghép nối audio đến phát kết quả ngay trên trình duyệt.
 
 ## 3.2. Đánh giá kết quả chất lượng âm thanh
 

@@ -27,8 +27,8 @@ const vniChips        = document.getElementById('vni-chips');
 // ============================================================
 textInput.addEventListener('input', () => {
   const len = textInput.value.length;
-  charCount.textContent = `${len} / 500 ký tự`;
-  charCount.classList.toggle('warning', len > 400);
+  charCount.textContent = `${len} ký tự`;
+  charCount.classList.remove('warning');
 });
 
 // ============================================================

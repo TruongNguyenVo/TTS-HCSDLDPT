@@ -99,6 +99,14 @@ python -c "from app.database import init_db; init_db()"
 
 ### 3.4. Nạp dữ liệu mẫu (seed)
 
+Danh sách từ và tệp âm thanh được nạp tự động từ
+`source_test/voice_list.csv` mỗi khi ứng dụng khởi động. Việc nạp là
+idempotent, có thể chạy lại mà không tạo bản ghi trùng:
+
+```bash
+python -c "from app.database import init_db; init_db()"
+```
+
 ```bash
 # Chạy script seed dữ liệu (tạo file này khi cần)
 python -c "

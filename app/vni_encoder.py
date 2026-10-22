@@ -15,17 +15,17 @@ import unicodedata
 
 def normalize_text(text: str) -> str:
     """
-    Làm sạch văn bản: bỏ dấu câu, chuyển về chữ thường, chuẩn hóa khoảng trắng.
+    Làm sạch văn bản: giữ dấu chấm và dấu phẩy, chuyển về chữ thường,
+    chuẩn hóa khoảng trắng.
 
     Args:
         text (str): Chuỗi văn bản đầu vào (VD: "Bác Ba, cảng!")
 
     Returns:
-        str: Chuỗi đã làm sạch (VD: "bác ba cảng")
+        str: Chuỗi đã làm sạch (VD: "bác ba, cảng.")
     """
-    # TODO: Implement logic làm sạch văn bản
     text = text.lower().strip()
-    text = re.sub(r'[^\w\s]', '', text, flags=re.UNICODE)
+    text = re.sub(r'[^\w\s,.]', '', text, flags=re.UNICODE)
     text = re.sub(r'\s+', ' ', text)
     return text
 
@@ -76,12 +76,11 @@ def encode_sentence(sentence: str) -> list[str]:
     Tách câu thành các từ đơn và trả về danh sách mã VNI.
 
     Args:
-        sentence (str): Câu tiếng Việt đầu vào (VD: "bác ba cảng")
+        sentence (str): Câu tiếng Việt đầu vào (VD: "bác ba, cảng.")
 
     Returns:
-        list[str]: Danh sách mã VNI (VD: ["bac1", "ba0", "cang3"])
+        list[str]: Danh sách mã VNI và dấu câu (VD: ["bac1", "ba0", ",", "cang3", "."])
     """
-    # TODO: Implement logic tách câu & mã hóa
     normalized = normalize_text(sentence)
-    words = normalized.split()
-    return [word_to_vni(w) for w in words]
+    tokens = re.findall(r'\w+|[,.]', normalized, flags=re.UNICODE)
+    return [token if token in {',', '.'} else word_to_vni(token) for token in tokens]
