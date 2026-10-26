@@ -58,22 +58,9 @@ CSDL được thiết kế gồm 3 bảng quan hệ để quản lý ngữ liệ
 | `pitch_avg` | `REAL` | Độ cao trung bình (Hz) |
 | `energy_avg` | `REAL` | Năng lượng trung bình tín hiệu |
 
-### Bảng `Missing_Audio` (Theo dõi audio còn thiếu)
-| Thuộc tính | Kiểu dữ liệu | Mô tả |
-| :--- | :--- | :--- |
-| `missing_id` | `INTEGER PRIMARY KEY` | Mã yêu cầu thiếu audio |
-| `vni_code` | `TEXT` | Mã VNI cần bổ sung |
-| `original_word` | `TEXT` | Từ tiếng Việt tương ứng, nếu đã có trong `Words` |
-| `speaker_id` | `INTEGER` | Giọng đọc đang được yêu cầu |
-| `request_count` | `INTEGER` | Số lần từ này được yêu cầu nhưng chưa có audio |
-| `status` | `TEXT` | Trạng thái, mặc định là `pending` |
-| `first_seen` | `TEXT` | Thời điểm phát hiện lần đầu |
-| `last_seen` | `TEXT` | Thời điểm phát hiện gần nhất |
-
 Khi không có audio của speaker được chọn, hệ thống sẽ tìm audio của speaker khác
-làm dự phòng. Cặp `vni_code` và `speaker_id` vẫn được ghi vào `Missing_Audio`
-để quản trị viên bổ sung audio đúng giọng đọc sau này. Nếu không có audio ở bất
-kỳ speaker nào, từ đó được đưa vào `not_found` và bị bỏ qua khi ghép câu.
+làm dự phòng. Nếu không có audio ở bất kỳ speaker nào, từ đó được đưa vào
+`not_found` và bị bỏ qua khi ghép câu.
 
 ---
 
@@ -86,6 +73,9 @@ Thực hiện chuyển đổi chuỗi văn bản tiếng Việt sang chuỗi mã
 * **`word_to_vni(word: str) -> str`**: Chuyển đổi 1 từ đơn tiếng Việt sang mã VNI.
   * Quy tắc dấu thanh: `1` (sắc), `2` (huyền), `3` (hỏi), `4` (ngã), `5` (nặng), `0` (không dấu).
   * Quy tắc nguyên âm/phụ âm đặc biệt: `â` -> `a+`, `ô` -> `o+`, `ê` -> `e+`, `ă` -> `aa`, `ơ` -> `oo`, `ư` -> `uu`, `đ` -> `d-`.
+* **`number_to_words(number: int | str) -> str`**: Chuyển số thành cách đọc từng chữ số,
+  ví dụ `12` thành `"một hai"`. `encode_sentence` tự động áp dụng hàm này cho các số
+  trong câu trước khi chuyển sang mã VNI.
 * **`encode_sentence(sentence: str) -> list[str]`**: Tách câu thành các từ đơn và trả về danh sách mã VNI.
 
 ### 3.2. Module `database.py` (Thao tác CSDL)
@@ -94,7 +84,6 @@ Quản lý kết nối và truy vấn CSDL SQLite.
 * **`init_db()`**: Tự động tạo bảng và nạp dữ liệu ban đầu nếu chưa có.
 * **`get_audio_path(vni_code: str, speaker_id: int) -> str`**: Tra cứu đường dẫn file `.wav` tương ứng với mã VNI và giọng đọc đã chọn.
 * **`get_audio_candidates(vni_code: str, speaker_id: int) -> list[dict]`**: Lấy audio của speaker được chọn trước, sau đó đến các speaker khác để dùng dự phòng.
-* **`record_missing_audio(vni_code: str, speaker_id: int) -> None`**: Ghi nhận hoặc tăng số lần yêu cầu một audio chưa có.
 * **`get_all_speakers() -> list[dict]`**: Lấy danh sách tất cả các giọng đọc để hiển thị trên giao diện.
 
 ### 3.3. Module `tts_engine.py` (Xử lý ghép nối âm thanh)

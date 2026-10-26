@@ -320,6 +320,47 @@ Kết quả cho thấy âm thanh tổng hợp rõ ràng ở mức từ đơn, h�
 - **Tích hợp trích xuất đặc trưng tự động**: Sử dụng thư viện `librosa` để tự động tính duration, pitch, energy khi import audio mới.
 - **Tối ưu cross-fade theo đặc trưng**: Điều chỉnh tham số cross-fade dựa trên pitch và energy hai đoạn liền kề để ghép mượt hơn.
 
+## 4.3. Phạm vi sử dụng trí tuệ nhân tạo (AI)
+
+Trong quá trình thực hiện đề tài, nhóm có sử dụng công cụ AI hội thoại như một
+trợ lý kỹ thuật. Việc sử dụng AI nhằm hỗ trợ quá trình nghiên cứu và phát triển,
+không thay thế vai trò thiết kế, triển khai, kiểm thử và chịu trách nhiệm của các
+thành viên trong nhóm.
+
+### 4.3.1. Các nội dung có sử dụng AI
+
+- **Tìm hiểu và giải thích kiến thức**: yêu cầu AI giải thích các khái niệm liên
+  quan đến TTS, mã hóa VNI, SQLite, FastAPI, `pydub` và cách tổ chức một ứng dụng
+  Web.
+- **Gợi ý thiết kế**: tham khảo gợi ý về cấu trúc thư mục, thiết kế các bảng
+  `Words`, `Speakers`, `Audio_Corpus`, quy trình tra cứu audio và luồng xử lý
+  từ văn bản đến tệp âm thanh.
+- **Hỗ trợ lập trình**: nhờ AI gợi ý hoặc rà soát một số đoạn mã Python,
+  FastAPI, JavaScript và SQL, chẳng hạn hàm mã hóa VNI, hàm chuyển từng chữ số
+  thành chữ tiếng Việt và logic ghép nối tệp WAV.
+- **Hỗ trợ tìm lỗi**: cung cấp thông báo lỗi và kết quả kiểm thử cho AI để nhận
+  diện nguyên nhân có thể xảy ra, sau đó nhóm tự kiểm tra lại trên mã nguồn,
+  cơ sở dữ liệu và các tệp audio thực tế.
+- **Hỗ trợ biên tập báo cáo**: tham khảo cách diễn đạt, sắp xếp nội dung và
+  trình bày các kết quả kỹ thuật trong báo cáo.
+
+### 4.3.2. Các nội dung do nhóm tự thực hiện
+
+- Xác định đề tài, mục tiêu, phạm vi và phương pháp tổng hợp ghép nối.
+- Thu âm, chuẩn bị, đặt tên và kiểm tra bộ ngữ liệu tiếng Việt.
+- Lựa chọn các công nghệ sử dụng, xây dựng cơ sở dữ liệu và tích hợp các module
+  của hệ thống.
+- Chạy thử ứng dụng, kiểm tra việc mã hóa VNI, tra cứu tệp audio, ghép nối và
+  phát kết quả trên giao diện Web.
+- Đánh giá kết quả, phân tích hạn chế và đề xuất hướng phát triển.
+
+### 4.3.3. Nguyên tắc kiểm chứng
+
+Các nội dung do AI gợi ý đều được nhóm đọc hiểu, chỉnh sửa và kiểm chứng trước
+khi sử dụng. Nhóm không đưa thông tin cá nhân, tài khoản, mật khẩu hoặc dữ liệu
+nhạy cảm vào công cụ AI. Mã nguồn cuối cùng, dữ liệu âm thanh, kết quả thực nghiệm
+và các nhận xét trong báo cáo thuộc trách nhiệm của nhóm.
+
 ---
 
 # Tài liệu tham khảo

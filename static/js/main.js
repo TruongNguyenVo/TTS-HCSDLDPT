@@ -82,7 +82,7 @@ btnConvert.addEventListener('click', async () => {
     if (notFound.length > 0) {
       setStatus(
         'error',
-        `⚠ Đã bỏ qua ${notFound.length} từ chưa có audio. Xem bảng Missing_Audio để bổ sung.`
+        `⚠ Đã bỏ qua ${notFound.length} từ chưa có audio.`
       );
     } else if (fallbackUsed.length > 0) {
       setStatus(

@@ -68,12 +68,10 @@ def concatenate_audio(
                 break
 
         if selected_path is None:
-            database.record_missing_audio(vni, speaker_id)
             not_found.append(vni)
             continue
 
         if selected_speaker_id != speaker_id:
-            database.record_missing_audio(vni, speaker_id)
             fallback_used.append({
                 "vni_code": vni,
                 "requested_speaker_id": speaker_id,

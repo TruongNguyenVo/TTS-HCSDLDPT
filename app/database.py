@@ -10,12 +10,11 @@ Các hàm chính:
 import sqlite3
 import os
 import csv
-from datetime import datetime, timezone
 
 # Đường dẫn tuyệt đối đến file database
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "database.db")
-VOICE_LIST_PATH = os.path.join(BASE_DIR, "source_test", "voice_list _22_10_2026.csv")
+VOICE_LIST_PATH = os.path.join(BASE_DIR, "source_test", "voice_list__24_10_2026.csv")
 
 
 def get_connection() -> sqlite3.Connection:
@@ -66,19 +65,7 @@ def init_db():
         )
     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS Missing_Audio (
-            missing_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-            vni_code      TEXT NOT NULL,
-            original_word TEXT,
-            speaker_id    INTEGER NOT NULL,
-            request_count INTEGER NOT NULL DEFAULT 1,
-            status        TEXT NOT NULL DEFAULT 'pending',
-            first_seen    TEXT NOT NULL,
-            last_seen     TEXT NOT NULL,
-            UNIQUE (vni_code, speaker_id)
-        )
-    """)
+    cursor.execute("DROP TABLE IF EXISTS Missing_Audio")
 
     # Dọn các bản ghi mẫu bị nhân đôi từ các phiên bản trước.
     cursor.execute("""
@@ -302,37 +289,6 @@ def get_audio_candidates(vni_code: str, speaker_id: int) -> list[dict]:
             (vni_code, speaker_id),
         ).fetchall()
         return [dict(row) for row in rows]
-    finally:
-        conn.close()
-
-
-def record_missing_audio(vni_code: str, speaker_id: int) -> None:
-    """Ghi nhận một cặp từ-speaker chưa có audio để bổ sung sau."""
-    now = datetime.now(timezone.utc).isoformat()
-    conn = get_connection()
-    try:
-        word = conn.execute(
-            "SELECT original_word FROM Words WHERE vni_code = ?",
-            (vni_code,),
-        ).fetchone()
-        original_word = word["original_word"] if word else None
-        conn.execute(
-            """
-            INSERT INTO Missing_Audio
-                (vni_code, original_word, speaker_id, first_seen, last_seen)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(vni_code, speaker_id) DO UPDATE SET
-                request_count = request_count + 1,
-                last_seen = excluded.last_seen,
-                original_word = COALESCE(excluded.original_word, Missing_Audio.original_word),
-                status = CASE
-                    WHEN Missing_Audio.status = 'completed' THEN 'pending'
-                    ELSE Missing_Audio.status
-                END
-            """,
-            (vni_code, original_word, speaker_id, now, now),
-        )
-        conn.commit()
     finally:
         conn.close()
 

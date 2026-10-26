@@ -13,6 +13,40 @@ import re
 import unicodedata
 
 
+DIGIT_WORDS = {
+    "0": "không",
+    "1": "một",
+    "2": "hai",
+    "3": "ba",
+    "4": "bốn",
+    "5": "năm",
+    "6": "sáu",
+    "7": "bảy",
+    "8": "tám",
+    "9": "chín",
+}
+
+
+def number_to_words(number: int | str) -> str:
+    """
+    Đọc một số theo từng chữ số.
+
+    Ví dụ:
+        number_to_words(12) -> "một hai"
+        number_to_words("007") -> "không không bảy"
+    """
+    if isinstance(number, bool):
+        raise TypeError("number phải là số nguyên không âm hoặc chuỗi chữ số")
+
+    number_text = str(number)
+    if isinstance(number, int) and number >= 0:
+        pass
+    elif not number_text.isdigit():
+        raise ValueError("number phải là số nguyên không âm hoặc chuỗi chữ số")
+
+    return " ".join(DIGIT_WORDS[digit] for digit in number_text)
+
+
 def normalize_text(text: str) -> str:
     """
     Làm sạch văn bản: giữ dấu chấm và dấu phẩy, chuyển về chữ thường,
@@ -83,4 +117,12 @@ def encode_sentence(sentence: str) -> list[str]:
     """
     normalized = normalize_text(sentence)
     tokens = re.findall(r'\w+|[,.]', normalized, flags=re.UNICODE)
-    return [token if token in {',', '.'} else word_to_vni(token) for token in tokens]
+    encoded = []
+    for token in tokens:
+        if token in {",", "."}:
+            encoded.append(token)
+        elif token.isdigit():
+            encoded.extend(word_to_vni(word) for word in number_to_words(token).split())
+        else:
+            encoded.append(word_to_vni(token))
+    return encoded

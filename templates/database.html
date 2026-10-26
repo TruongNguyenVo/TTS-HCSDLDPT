@@ -86,12 +86,6 @@
               <input id="table-search" type="search" placeholder="Tìm trong bảng..." aria-label="Tìm trong bảng" />
             </label>
           </div>
-          {% if selected_table == 'Missing_Audio' %}
-          <!-- <p class="table-note">
-            Bảng này tự động ghi nhận các cặp từ và giọng đọc chưa có audio. Có thể dùng
-            <code>request_count</code> để ưu tiên bổ sung các từ xuất hiện nhiều nhất.
-          </p> -->
-          {% endif %}
           {% if rows %}
           <div class="table-meta">
             <span>Hiển thị {{ rows|length }} / {{ total }} bản ghi</span>
