@@ -19,10 +19,10 @@ Tổng hợp giọng nói từ văn bản (Text-to-Speech — TTS) là bài toá
 
 ## 1.2. Mục tiêu đề tài
 
-Xây dựng hệ thống TTS tiếng Việt ở **mức từ (word-level)** dựa trên bộ ngữ liệu thu âm do chính thành viên trong nhóm thực hiện. Cụ thể, hệ thống cần đạt được:
+Xây dựng hệ thống TTS tiếng Việt ở **mức từ** dựa trên bộ ngữ liệu thu âm do chính thành viên trong nhóm thực hiện. Cụ thể, hệ thống cần đạt được:
 
-1. Thu âm và tổ chức bộ ngữ liệu âm thanh đơn từ tiếng Việt theo giọng đọc từng thành viên.
-2. Thiết kế cơ sở dữ liệu SQLite để quản lý quan hệ **từ — âm thanh — người đọc** cùng các đặc trưng trích xuất.
+1. Thu âm và tổ chức bộ ngữ liệu âm thanh đơn từ tiếng Việt theo giọng đọc của thành viên nhóm.
+2. Thiết kế cơ sở dữ liệu SQLite để quản lý quan hệ **từ — âm thanh — người đọc**, đồng thời lưu metadata mô tả các tệp âm thanh.
 3. Xây dựng module mã hóa văn bản tiếng Việt sang hệ thống mã VNI phục vụ tra cứu.
 4. Phát triển engine ghép nối âm thanh từ các file `.wav` đơn từ thành câu hoàn chỉnh.
 5. Triển khai giao diện Web cho phép người dùng tương tác trực quan: nhập văn bản → nghe kết quả → tải xuống.
@@ -42,6 +42,11 @@ Hệ thống sử dụng phương pháp **tổng hợp ghép nối (concatenativ
 # 2. PHƯƠNG PHÁP NGHIÊN CỨU
 
 ## 2.1. Ngữ liệu song song & Quy ước mã hóa VNI
+
+Mục này trình bày nguồn ngữ liệu được sử dụng và cách chuẩn hóa dữ liệu văn bản
+để liên kết với các tệp âm thanh tương ứng. Do hệ thống tra cứu audio thông qua
+tên mã, việc thống nhất quy ước VNI giúp chuyển từ tiếng Việt có dấu thành khóa
+tra cứu ổn định, đồng thời bảo toàn thông tin thanh điệu và vị trí ngắt câu.
 
 ### 2.1.1. Mô tả tập dữ liệu
 
@@ -78,6 +83,15 @@ Các tệp âm thanh được lưu tại thư mục `static/audio_corpus/` với
 | ê          | `e+`   | ư          | `uu`   |
 | đ          | `d-`   |            |        |
 
+**Quy tắc xử lý dấu câu** — dấu chấm và dấu phẩy không được chuyển thành mã
+VNI có hậu tố thanh điệu. Chúng được giữ nguyên như các token riêng trong danh
+sách mã hóa để bảo toàn vị trí ngắt câu và ngắt giữa các cụm từ:
+
+| Dấu câu | Token sau mã hóa | Ý nghĩa xử lý |
+|:-------:|:----------------:|:--------------|
+| `,` | `,` | Giữ nguyên dấu phẩy, tạo khoảng lặng 150 ms giữa các từ hoặc cụm từ |
+| `.` | `.` | Giữ nguyên dấu chấm, tạo khoảng lặng 350 ms khi kết thúc câu hoặc ngắt dài hơn |
+
 **Ví dụ minh hoạ quá trình mã hóa**:
 
 | Từ tiếng Việt | Phân tích              | Mã VNI   |
@@ -91,7 +105,12 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
 
 ## 2.2. Sơ đồ khối & Quy trình xử lý của hệ thống
 
-### 2.2.1. Sơ đồ khối (Block Diagram)
+Phần này mô tả kiến trúc xử lý từ khi hệ thống tiếp nhận văn bản đến khi tạo ra
+tệp âm thanh đầu ra. Sơ đồ khối và các bước dưới đây làm rõ mối liên hệ giữa
+module mã hóa VNI, cơ sở dữ liệu, bộ máy ghép nối audio và giao diện Web trong
+toàn bộ quy trình TTS.
+
+### 2.2.1. Sơ đồ khối
 
 ![Sơ đồ khối quy trình chuyển văn bản tiếng Việt thành giọng nói](./quytrinh.png)
 
@@ -99,9 +118,16 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
 
 ### 2.2.2. Giải thích luồng xử lý
 
-1. **Chuẩn hóa văn bản**: Câu đầu vào được chuyển về chữ thường, loại bỏ tất cả dấu câu và ký tự đặc biệt bằng biểu thức chính quy `re.sub(r'[^\w\s]', '', text)`, chuẩn hóa nhiều khoảng trắng liên tiếp thành một.
+1. **Chuẩn hóa văn bản**: Câu đầu vào được chuyển về chữ thường, giữ lại dấu
+   chấm và dấu phẩy, loại bỏ các ký tự đặc biệt khác bằng biểu thức chính quy
+   `re.sub(r'[^\w\s,.]', '', text)`, sau đó chuẩn hóa nhiều khoảng trắng liên
+   tiếp thành một.
 
-2. **Mã hóa VNI**: Câu được tách thành danh sách từ đơn bằng `split()`. Mỗi từ được chuẩn hóa Unicode, sau đó duyệt từng ký tự qua bảng tra `VNI_MAP` để thay thế nguyên âm có dấu và phụ âm `đ`, cuối cùng gắn mã thanh điệu vào cuối.
+2. **Mã hóa VNI**: Câu được tách thành các token từ và dấu câu bằng biểu thức
+   `re.findall(r'\w+|[,.]', normalized)`. Với token là từ, hệ thống chuẩn hóa
+   Unicode, duyệt từng ký tự qua bảng tra `VNI_MAP` để thay thế nguyên âm có
+   dấu và phụ âm `đ`, cuối cùng gắn mã thanh điệu vào cuối. Với token là dấu
+   chấm hoặc dấu phẩy, hệ thống giữ nguyên token đó.
 
 3. **Tra cứu CSDL**: Với mỗi mã VNI, hệ thống thực hiện truy vấn JOIN giữa bảng `Words` và `Audio_Corpus` để tìm đường dẫn tệp `.wav`. Nếu hoàn toàn không có audio, từ đó bị bỏ qua khi ghép.
 
@@ -109,23 +135,28 @@ Module `vni_encoder.py` cài đặt bảng tra `VNI_MAP` chứa đầy đủ án
 
 5. **Trả kết quả**: Backend trả về JSON chứa URL tệp âm thanh, danh sách mã VNI đã mã hóa và danh sách từ không tìm thấy (`not_found`). Frontend nhận kết quả, hiển thị trình phát audio và chip mã VNI (đánh dấu đỏ cho từ thiếu audio).
 
-### 2.2.3. Thành phần phần mềm (Công nghệ sử dụng)
+### 2.2.3. Thành phần phần mềm
 
 ![Kiến trúc tổng quan](./kientructongquan.png)
 
 **Backend API — FastAPI (Python)**: Đóng vai trò là lớp trung gian xử lý toàn bộ yêu cầu HTTP từ phía người dùng. FastAPI tiếp nhận văn bản đầu vào, điều phối luồng xử lý TTS qua các module phụ trợ và cung cấp hai endpoint RESTful chính: `/api/tts` để tổng hợp âm thanh và `/api/speakers` để trả về danh sách giọng đọc.
 
-**Cơ sở dữ liệu — SQLite**: Là thành phần lưu trữ trung tâm của hệ thống, SQLite quản lý toàn bộ dữ liệu từ vựng (bảng `Words`), thông tin người thu âm (bảng `Speakers`) và kho âm thanh cùng đặc trưng trích xuất (bảng `Audio_Corpus`). Việc lựa chọn SQLite phù hợp với quy mô của đề tài nhờ tính nhẹ, không cần máy chủ riêng và dễ tích hợp với Python.
+**Cơ sở dữ liệu — SQLite**: Là thành phần lưu trữ trung tâm của hệ thống, SQLite quản lý toàn bộ dữ liệu từ vựng (bảng `Words`), thông tin người thu âm (bảng `Speakers`) và kho âm thanh cùng metadata mô tả tệp (bảng `Audio_Corpus`). Việc lựa chọn SQLite phù hợp với quy mô của đề tài nhờ tính nhẹ, không cần máy chủ riêng và dễ tích hợp với Python.
 
 **Frontend — HTML/CSS/JavaScript**: Cung cấp giao diện Web tương tác trực tiếp trên trình duyệt mà không yêu cầu cài đặt thêm phần mềm phía người dùng. Giao diện gồm ô nhập văn bản, trình phát audio tùy chỉnh và bảng hiển thị mã VNI — toàn bộ được xây dựng bằng HTML/CSS/JavaScript thuần, giao tiếp với backend qua Fetch API.
 
 **Xử lý âm thanh — pydub**: Thư viện Python chịu trách nhiệm toàn bộ quá trình xử lý tín hiệu âm thanh: đọc các tệp `.wav` từ kho ngữ liệu, ghép nối tuần tự theo thứ tự từ trong câu, chèn khoảng lặng 50 ms giữa các từ và áp dụng làm mịn 10 ms tại điểm ghép, sau đó xuất kết quả thành tệp `.wav` cuối cùng.
 
-**Template — Jinja2**: Đảm nhận việc render trang HTML động phía server. Jinja2 cho phép nhúng dữ liệu từ CSDL (danh sách bảng, bản ghi, thống kê) vào các template HTML trước khi gửi về trình duyệt, đặc biệt phục vụ trang Database Explorer (`/database`).
+**Template — Jinja2**: Đảm nhận việc render trang HTML động phía server. Jinja2 cho phép nhúng dữ liệu từ CSDL (danh sách bảng, bản ghi, thống kê) vào các template HTML trước khi gửi về trình duyệt.
 
 ## 2.3. Quản lý và Lưu trữ CSDL
 
-### 2.3.1. Lược đồ quan hệ (ER Diagram)
+Để quản lý văn bản – âm thanh theo từ và theo người thu âm, hệ thống sử
+dụng cơ sở dữ liệu quan hệ SQLite làm lớp lưu trữ trung tâm. Phần này trình bày
+lược đồ quan hệ, vai trò của từng bảng và cách các khóa liên kết hỗ trợ tra cứu
+đúng tệp audio theo mã VNI và speaker được lựa chọn.
+
+### 2.3.1. Lược đồ quan hệ
 
 ```
 ┌─────────────┐       ┌───────────────────┐       ┌──────────────┐
@@ -167,7 +198,7 @@ CREATE TABLE IF NOT EXISTS Speakers (
 
 ### 2.3.4. Bảng Audio_Corpus (Kho âm thanh & Đặc trưng)
 
-Bảng trung tâm liên kết từ vựng với tệp âm thanh thông qua khóa ngoại `word_id` (tham chiếu `Words`) và `speaker_id` (tham chiếu `Speakers`). Ngoài đường dẫn tệp `.wav`, bảng còn lưu các đặc trưng âm thanh được trích xuất.
+Bảng trung tâm liên kết từ vựng với tệp âm thanh thông qua khóa ngoại `word_id` (tham chiếu `Words`) và `speaker_id` (tham chiếu `Speakers`).
 
 ```sql
 CREATE TABLE IF NOT EXISTS Audio_Corpus (
@@ -186,19 +217,25 @@ CREATE TABLE IF NOT EXISTS Audio_Corpus (
 
 ## 2.4. Trích rút đặc trưng & Thuật toán ghép nối âm thanh
 
-### 2.4.1. Đặc trưng âm thanh
+Sau khi audio được tra cứu từ cơ sở dữ liệu, hệ thống cần mô tả và kết hợp các
+đoạn WAV để tạo thành tín hiệu đầu ra. Phần này phân biệt metadata dùng để mô tả
+corpus với dữ liệu waveform được ghép trực tiếp, đồng thời trình bày các thao
+tác chèn khoảng lặng và làm mịn tại ranh giới giữa các đoạn âm thanh.
 
-Mỗi tệp `.wav` trong kho ngữ liệu có thể được biểu diễn qua các chỉ số đặc trưng sau, lưu trong bảng `Audio_Corpus`:
+### 2.4.1. Metadata mô tả âm thanh
+
+Mỗi tệp `.wav` trong kho ngữ liệu có thể được mô tả bằng các metadata sau, lưu trong bảng `Audio_Corpus`. Các giá trị này giúp thống kê, kiểm tra và phục vụ khả năng mở rộng hệ thống; engine hiện tại vẫn sử dụng trực tiếp waveform của tệp WAV gốc để ghép nối.
 
 | Đặc trưng | Trường CSDL | Đơn vị | Ý nghĩa |
 |:-----------|:------------|:-------|:---------|
-| **Thời lượng** (Duration) | `duration_ms` | ms | Độ dài thời gian phát của đoạn âm thanh |
-| **Độ cao** (Pitch) | `pitch_avg` | Hz | Tần số dao động trung bình của dây thanh, phản ánh cao/thấp giọng |
-| **Năng lượng** (Energy) | `energy_avg` | dB/RMS | Cường độ tín hiệu trung bình, phản ánh to/nhỏ giọng |
+| **Thời lượng** (Duration) | `duration_ms` | ms | Metadata về độ dài thời gian phát của đoạn âm thanh |
+| **Độ cao trung bình** (Pitch) | `pitch_avg` | Hz | Metadata mô tả tần số dao động trung bình của tín hiệu, phản ánh cao/thấp giọng |
+| **Năng lượng trung bình** (Energy) | `energy_avg` | dBFS/RMS | Metadata mô tả cường độ tín hiệu trung bình, phản ánh to/nhỏ giọng |
 
-Ngoài ra, trong phân tích và trực quan hóa, có thể sử dụng thêm:
-- **Dạng sóng (Waveform)**: biểu đồ biên độ tín hiệu theo thời gian — thể hiện cấu trúc thời gian của âm thanh.
-- **Phổ tần (Spectrogram)**: biểu đồ 2D thể hiện phân bố năng lượng theo tần số và thời gian — cho phép nhận diện formant và đặc trưng ngữ âm.
+Trong phiên bản hiện tại, `pitch_avg` và `energy_avg` không điều khiển quá trình
+ghép nối và không được dùng để biến đổi waveform. Chúng chỉ được lưu như metadata
+của từng tệp audio để mô tả corpus, hỗ trợ phân tích chất lượng bản ghi và làm cơ
+sở cho các hướng mở rộng như lựa chọn đoạn tương thích hoặc điều chỉnh prosody.
 
 ### 2.4.2. Thuật toán ghép nối âm thanh
 
@@ -241,6 +278,13 @@ final_audio.export("static/temp_outputs/output.wav", format="wav")
 
 ## 3.1. Giao diện và Demo chương trình
 
+Phần này trình bày giao diện người dùng và kết quả chạy thử hệ thống TTS trên
+môi trường Web. Thông qua quy trình demo, người dùng có thể nhập một từ hoặc
+một chuỗi từ tiếng Việt, lựa chọn giọng đọc, theo dõi quá trình chuyển đổi và
+nghe hoặc tải xuống tệp âm thanh đầu ra. Nội dung minh họa tập trung kiểm tra
+toàn bộ luồng xử lý đã trình bày ở phần trước, từ tiếp nhận văn bản, mã hóa VNI,
+tra cứu audio trong cơ sở dữ liệu đến ghép nối và phát tín hiệu âm thanh kết quả.
+
 ### 3.1.1. Trang chủ — Giao diện tổng hợp TTS
 
 ![Giao diện trang chủ](./giaodien_input.png)
@@ -276,14 +320,21 @@ Demo cho thấy hệ thống thực hiện đầy đủ chu trình từ nhập v
 
 ## 3.2. Đánh giá kết quả chất lượng âm thanh
 
+Phần này đánh giá kết quả tổng hợp dựa trên các mẫu đầu vào đại diện, gồm câu
+chỉ chứa những từ có trong corpus và câu có từ không tìm thấy. Các tiêu chí được
+quan sát gồm khả năng tra cứu, thời lượng tệp đầu ra, độ rõ của từng từ và mức
+độ liền mạch tại các điểm ghép; qua đó làm rõ hiệu quả cũng như giới hạn của
+phương pháp tổng hợp ghép nối ở mức từ.
+
 ### 3.2.1. Bảng đánh giá
 
-| Tiêu chí           | Mức đánh giá | Ghi chú |
-|:--------------------|:-------------|:--------|
-| Độ rõ tiếng từng từ | Tốt          | Mỗi từ đơn phát rõ ràng, đúng thanh điệu vì sử dụng audio gốc thu âm |
-| Độ tự nhiên liên từ | Trung bình   | Có thể nhận ra ranh giới ghép giữa các từ; ngữ điệu chưa liền mạch |
-| Tốc độ xử lý       | Tốt          | Thời gian phản hồi < 1 giây cho câu 5–10 từ |
-| Giao diện người dùng | Tốt         | Trực quan, responsive, có feedback trạng thái realtime |
+| Mẫu kiểm thử | Số từ | Từ tìm thấy | Từ không tìm thấy | Thời lượng đầu ra | Nhận xét |
+|:-------------|------:|------------:|------------------:|-------------------:|:---------|
+| `bác ba đi cảng` | 4 | 4 | 0 | khoảng 3.000 ms | Các từ được phát âm rõ; audio đầu ra được tạo thành công |
+| Câu demo dài | 52 | 52 | 0 | khoảng 28.000 ms | Tạo được câu dài; có thể nghe thấy ranh giới ghép giữa các từ |
+| Câu chứa từ ngoài corpus, ví dụ `bác xyz` | 2 | 1 | 1 | phụ thuộc vào từ tìm thấy | Hệ thống cảnh báo hoặc bỏ qua từ không có trong corpus; vẫn ghép các từ tìm thấy |
+
+
 
 ### 3.2.2. Phân tích ưu/nhược điểm
 
@@ -293,9 +344,8 @@ Demo cho thấy hệ thống thực hiện đầy đủ chu trình từ nhập v
 - **Kiến trúc module rõ ràng**: tách biệt encoder, database, engine và API server — dễ bảo trì và phát triển.
 
 **Nhược điểm**:
-- **Ngữ điệu liên từ thiếu tự nhiên**: phương pháp ghép nối từ đơn không thể mô phỏng sự biến đổi pitch, cường độ và nhịp điệu giữa các từ trong câu hoàn chỉnh (coarticulation).
-- **Phụ thuộc vào kho ngữ liệu**: hệ thống chỉ phát âm được những từ đã có trong CSDL; từ mới hoàn toàn sẽ bị bỏ qua.
-- Cross-fade 10 ms giúp giảm hiện tượng "click" nhưng **chưa xử lý được sự chênh lệch pitch và energy** giữa hai từ liền kề từ các lượt thu âm khác nhau.
+- **Ngữ điệu liên từ thiếu tự nhiên**: phương pháp ghép nối từ đơn không thể mô phỏng sự biến đổi pitch, cường độ và nhịp điệu giữa các từ trong câu hoàn chỉnh.
+- **Phụ thuộc vào kho ngữ liệu**: hệ thống chỉ phát âm được những từ đã có trong CSDL; từ mới hoàn toàn sẽ bị bỏ qua.Cross-fade 10 ms giúp giảm hiện tượng "click" nhưng **chưa xử lý được sự chênh lệch pitch và energy** giữa hai từ liền kề từ các lượt thu âm khác nhau.
 - Chưa xử lý được **từ ghép, từ đồng âm** và các trường hợp đặc biệt trong tiếng Việt.
 
 ---
@@ -306,7 +356,7 @@ Demo cho thấy hệ thống thực hiện đầy đủ chu trình từ nhập v
 
 Đề tài đã hoàn thành việc xây dựng hệ thống TTS tiếng Việt mức từ sử dụng phương pháp tổng hợp ghép nối, đáp ứng đầy đủ các yêu cầu đặt ra: 
 - Thu âm và tổ chức bộ ngữ liệu âm thanh đơn từ theo quy ước mã hóa VNI; 
-- Thiết kế CSDL SQLite gồm 3 bảng quan hệ quản lý từ vựng, giọng đọc và kho âm thanh; 
+- Thiết kế cơ sở dữ liệu SQLite gồm 3 bảng quan hệ quản lý từ vựng, giọng đọc và kho âm thanh; 
 - Xây dựng module mã hóa VNI hỗ trợ đầy đủ 6 thanh điệu và 7 ký tự đặc biệt tiếng Việt; 
 - Cài đặt engine ghép nối với kỹ thuật silence insertion và cross-fade; 
 - Triển khai giao diện Web hoàn chỉnh trên nền FastAPI với trình phát audio tùy chỉnh và trang quản trị CSDL. 
@@ -320,7 +370,7 @@ Kết quả cho thấy âm thanh tổng hợp rõ ràng ở mức từ đơn, h�
 - **Tích hợp trích xuất đặc trưng tự động**: Sử dụng thư viện `librosa` để tự động tính duration, pitch, energy khi import audio mới.
 - **Tối ưu cross-fade theo đặc trưng**: Điều chỉnh tham số cross-fade dựa trên pitch và energy hai đoạn liền kề để ghép mượt hơn.
 
-## 4.3. Phạm vi sử dụng trí tuệ nhân tạo (AI)
+## 4.3. Phạm vi sử dụng trí tuệ nhân tạo
 
 Trong quá trình thực hiện đề tài, nhóm có sử dụng công cụ AI hội thoại như một
 trợ lý kỹ thuật. Việc sử dụng AI nhằm hỗ trợ quá trình nghiên cứu và phát triển,
